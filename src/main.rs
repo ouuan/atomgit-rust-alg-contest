@@ -171,8 +171,8 @@ mod tests {{
     test_map.insert("solution1".to_owned(), Solution{ score: 20 ,test: solution1});
     test_map.insert("solution2".to_owned(), Solution{ score: 20 ,test: solution2});
     test_map.insert("solution3".to_owned(), Solution{ score: 20 ,test: solution3});
-    test_map.insert("solution4".to_owned(), Solution{ score: 50 ,test: solution4});
-    test_map.insert("solution5".to_owned(), Solution{ score: 50 ,test: solution5});
+    test_map.insert("solution4".to_owned(), Solution{ score: 20 ,test: solution4});
+    test_map.insert("solution5".to_owned(), Solution{ score: 20 ,test: solution5});
 
     let exercise_check_list =  Arc::new(Mutex::new(
         ExerciseCheckList {
