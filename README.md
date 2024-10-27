@@ -1,7 +1,7 @@
 ## 项目名称
 > Rust 数据结构与算法大赛作品提交仓库 
 1. 在开放原子注册账号 地址是 https://passport.atomgit.com/login
-2. fork  https://atomgit.com/xxx 项目
+2. fork https://atomgit.com/rust/RustContest 项目
 3. 配置流水线密钥变量信息 名称是ID 值为在atomgit的用户名
 4. 在个人设置中查找用户名
     ![在个人设置中查找用户名](.assets/用户名.png)
@@ -20,5 +20,6 @@
 
 ## 运行说明
 > 运行具体步骤说明
+* 进入exercises目录里面的项目
 * 通过Cargo能编译成功
 * 编译得到的二进制能运行
