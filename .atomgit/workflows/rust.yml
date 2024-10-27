@@ -1,0 +1,57 @@
+name: GitHub Classroom Workflow
+
+on:
+  push:
+    branches: [ master ]
+    paths-ignore:
+      - 'README.md'
+  pull_request:
+    branches: [ master ]
+  workflow_dispatch:
+
+env:
+  CARGO_TERM_COLOR: always
+  TZ: Asia/Shanghai
+
+jobs:
+  build:
+    name: Autograding
+    runs-on: ubuntu-latest
+
+    steps:
+    - uses: actions/checkout@v4
+    - uses: actions-rust-lang/setup-rust-toolchain@v1
+    - name: Run tests
+      run: |
+        echo "开始评分"
+        cargo run --verbose
+    - name: Generate summary JSON
+      env:
+        course_id: "1731"
+        atomgit_user: ${{ secrets.ID }}
+      run: |
+        outfile=".atomgit/result/check_result.json"
+        summary_file=".atomgit/result/summary.json"
+        total_exercations=$(jq '.statistics.total_exercations' $outfile)
+        total_succeeds=$(jq '.statistics.total_succeeds' $outfile)
+        new_json=$(jq -n \
+          --arg channel "atomgit" \
+          --argjson courseId "$course_id" \
+          --arg ext "aaa" \
+          --arg name "$atomgit_user" \
+          --argjson score "$total_succeeds" \
+          --argjson totalScore "$total_exercations" \
+          '{channel: $channel, courseId: $courseId, ext: $ext, name: $name, score: $score, totalScore: $totalScore}')
+        # 保存新的 JSON 文件
+        echo "$new_json" > $summary_file
+        # 打印新的 JSON 文件到终端
+        cat $summary_file
+    - name: Post summary JSON to remote API
+      run: |
+        summary_file=".atomgit/result/summary.json"
+        cat $summary_file
+        curl -X POST https://api.learningcamp.cn/web/api/courseRank/createByThird \
+          -H "accept: application/json;charset=utf-8" \
+          -H "Content-Type: application/json" \
+          -d "$(cat $summary_file)" \
+          -v
