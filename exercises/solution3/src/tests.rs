@@ -18,7 +18,6 @@ mod tests {
         let mut total_score = 0.0;
         for (input1, expected) in TEST_CASES {
             let result = new_count_distinct(*input1);
-            // 定义一个容差值
             if result == *expected {
                 total_score += 20.0;
             }

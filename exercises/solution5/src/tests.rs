@@ -18,7 +18,6 @@ mod tests {
         let mut total_score = 0.0;
         for (input1, expected) in TEST_CASES {
             let result = odd_fibnacci_sum(*input1);
-            // 定义一个容差值
             if result == *expected {
                 total_score += 20.0;
             }
