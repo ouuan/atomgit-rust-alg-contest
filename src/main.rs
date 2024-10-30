@@ -9,7 +9,7 @@ async fn main() {
 mod calc_logic;
 #[cfg(test)]
 mod tests {{
-    use super::calc_logic::birthday_paradox_probability;
+    use super::calc_logic::new_birthday_probability;
     // 定义测试用例和预期结果
     const TEST_CASES: &[(u32, f64)] = &[
         (23, 0.5073),
@@ -20,10 +20,10 @@ mod tests {{
     ];
     // 定义一个测试函数来验证每个测试用例
     #[test]
-    fn test_birthday_paradox_probability() {{
+    fn test_new_birthday_probability() {{
         let mut total_score = 0.0;
         for (input, expected) in TEST_CASES {{
-            let result = birthday_paradox_probability(*input);
+            let result = new_birthday_probability(*input);
 
             // 定义一个容差值
             let tolerance = 0.0001;
@@ -80,7 +80,7 @@ mod tests {{
 mod count_distinct;
 #[cfg(test)]
 mod tests {{
-    use super::count_distinct::probability_count_distinct;
+    use super::count_distinct::new_count_distinct;
     // 定义测试用例和预期结果
     const TEST_CASES: &[(&str, usize)] = &[
         (\"a,b,c,a,e,cd\", 5),
@@ -94,7 +94,7 @@ mod tests {{
     fn test_count() {{
         let mut total_score = 0.0;
         for (input1, expected) in TEST_CASES {{
-            let result = probability_count_distinct(*input1);
+            let result = new_count_distinct(*input1);
             // 定义一个容差值
             if result == *expected {{
                 total_score += 20.0;
@@ -177,10 +177,10 @@ mod tests {{
     let exercise_check_list =  Arc::new(Mutex::new(
         ExerciseCheckList {
             statistics: ExerciseStatistics {
-                total_exercations: 100, 
-                total_succeeds: 0, 
-                total_failures: 0, 
-                total_time: 0, 
+                total_exercations: 100,
+                total_succeeds: 0,
+                total_failures: 0,
+                total_time: 0,
             }
         }
     ));

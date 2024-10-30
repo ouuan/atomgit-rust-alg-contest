@@ -1,4 +1,3 @@
-
 // src/tests.rs
 mod rec_mc;
 #[cfg(test)]
@@ -28,4 +27,3 @@ mod tests {
         assert_eq!(100.00, total_score);
     }
 }
-    

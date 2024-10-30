@@ -2,7 +2,7 @@
 mod calc_logic;
 #[cfg(test)]
 mod tests {
-    use super::calc_logic::birthday_paradox_probability;
+    use super::calc_logic::new_birthday_probability;
     // 定义测试用例和预期结果
     const TEST_CASES: &[(u32, f64)] = &[
         (23, 0.5073),
@@ -13,10 +13,10 @@ mod tests {
     ];
     // 定义一个测试函数来验证每个测试用例
     #[test]
-    fn test_birthday_paradox_probability() {
+    fn test_new_birthday_probability() {
         let mut total_score = 0.0;
         for (input, expected) in TEST_CASES {
-            let result = birthday_paradox_probability(*input);
+            let result = new_birthday_probability(*input);
 
             // 定义一个容差值
             let tolerance = 0.0001;
@@ -33,4 +33,3 @@ mod tests {
         assert_eq!(100.00, total_score);
     }
 }
-    

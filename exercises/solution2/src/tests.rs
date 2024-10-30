@@ -31,4 +31,3 @@ mod tests {
         assert_eq!(100.00, total_score);
     }
 }
-    
