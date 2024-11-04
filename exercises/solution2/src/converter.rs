@@ -11,6 +11,10 @@ pub fn convert_base(num_str: &str, to_base: u32) -> String {
     }
 
     // convert integer to output string
+    if num == 0 {
+        return "0".into();
+    }
+
     let mut result = Vec::new();
     while num > 0 {
         result.push(std::char::from_digit(num % to_base, to_base).unwrap());
