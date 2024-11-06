@@ -28,7 +28,7 @@ jobs:
     - name: Generate summary JSON
       env:
         course_id: "1731"
-        atomgit_user: ${{ secrets.ID }}
+        atomgit_user: ${{ github.repository_owner }}
       run: |
         outfile=".atomgit/result/check_result.json"
         summary_file=".atomgit/result/summary.json"
