@@ -13,8 +13,9 @@
     ![配置密钥说明图](.assets/配置密钥说明.png)
 7. 配置成功会这样显示
     ![配置成功会这样显示](.assets/配置ID成功.png) -->
-8. 从https://atomgit.com/rust/RustContest.git导入题目
+4. 从https://atomgit.com/rust/RustContest.git导入题目
     ![导入题目](.assets/导入题目.jpg)
+5. 开启流水线功能
 
 
 ## 代码提交
