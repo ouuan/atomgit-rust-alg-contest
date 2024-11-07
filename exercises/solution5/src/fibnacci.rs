@@ -1,3 +1,4 @@
+/// Generate Fibonacci numbers that fit into u32. First items are 1, 1, 2, 3, 5...
 struct FibonacciGen {
     a: u32,
     b: u32,
@@ -5,7 +6,7 @@ struct FibonacciGen {
 
 impl FibonacciGen {
     pub fn new() -> Self {
-        Self { a: 0, b: 1 }
+        Self { a: 1, b: 0 }
     }
 }
 
@@ -13,10 +14,10 @@ impl Iterator for FibonacciGen {
     type Item = u32;
 
     fn next(&mut self) -> Option<Self::Item> {
-        let a = self.a;
+        let c = self.a.checked_add(self.b)?;
         self.a = self.b;
-        self.b += a;
-        Some(a)
+        self.b = c;
+        Some(c)
     }
 }
 
