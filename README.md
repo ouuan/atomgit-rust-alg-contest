@@ -5,13 +5,13 @@
     ![创建一个空的开源项目](.assets/空项目.jpg)
 3. 设置为公开开源
     ![设置为公开开源](.assets/公开开源.jpg)
-4. 配置流水线密钥变量信息 名称是ID 值为在atomgit的用户名
+<!-- 4. 配置流水线密钥变量信息 名称是ID 值为在atomgit的用户名
 5. 在个人设置中查找用户名
     ![在个人设置中查找用户名](.assets/用户名.png)
 6. 配置密钥说明图
     ![配置密钥说明图](.assets/配置密钥说明.png)
 7. 配置成功会这样显示
-    ![配置成功会这样显示](.assets/配置ID成功.png)
+    ![配置成功会这样显示](.assets/配置ID成功.png) -->
 8. 从https://atomgit.com/rust/RustContest.git导入题目
     ![导入题目](.assets/导入题目.jpg)
 
