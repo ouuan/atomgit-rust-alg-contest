@@ -27,7 +27,7 @@ jobs:
         cargo run --verbose
     - name: Generate summary JSON
       env:
-        course_id: "1731"
+        course_id: "1734"
         atomgit_user: ${{ github.repository_owner }}
       run: |
         outfile=".atomgit/result/check_result.json"
