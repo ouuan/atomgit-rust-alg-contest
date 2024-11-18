@@ -29,8 +29,8 @@ mod tests {
             let result = converter(*input);
             let duration = start.elapsed();
 
-            // 时间超1s，判定不合格
-            if duration <= Duration::new(1, 0) && result == *expected {
+            // 时间超0.5s，判定不合格
+            if duration <= Duration::from_millis(500) && result == *expected {
                 total_score += 10.0;
             }
         }

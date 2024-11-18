@@ -17,9 +17,9 @@ mod tests {
         let result = goldbach_conjecture();
         let duration = start.elapsed();
 
-        // 时间超1s，判定不合格
+        // 时间超0.5s，判定不合格
         let mut total_score = 0.0;
-        if duration <= Duration::new(1, 0) && result == TEST_CASE {
+        if duration <= Duration::from_millis(500) && result == TEST_CASE {
             total_score += 100.0;
         }
 
