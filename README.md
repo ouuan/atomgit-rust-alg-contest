@@ -16,7 +16,7 @@
 4. 从https://atomgit.com/rust/RustContest.git导入题目
     ![导入题目](.assets/导入题目.jpg)
 5. 开启流水线功能
-
+6. 在https://opencamp.cn/atomgit/camp/rust/stage/2报名并完善个人信息；AtomgitName 必填且是填写Atomgit的用户名
 
 ## 代码提交
 * 初赛 完成 exercises 目录下5道题

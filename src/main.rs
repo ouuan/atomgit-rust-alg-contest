@@ -1,17 +1,21 @@
 use std::sync::Arc;
 use std::{process::Command, sync::Mutex};
-use std::collections::HashMap;
 use serde::{Deserialize, Serialize};
 use std::fs;
 
-// 解决方案
-struct Solution {
-    score: u32,
-    test: String,
+#[derive(Deserialize, Debug)]
+pub struct ExerciseList {
+    pub exercises: Vec<Exercise>,
+}
+#[derive(Deserialize, Serialize, Debug)]
+pub struct Exercise {
+    pub path: String,
+    pub score: u32,
+    pub test: String,
 }
 
 // 测试统计
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct ExerciseStatistics {
     pub total_exercations: u32,
     pub total_succeeds: u32,
@@ -20,25 +24,16 @@ pub struct ExerciseStatistics {
 }
 
 // 统计列表
-#[derive(Deserialize, Serialize)]
+#[derive(Deserialize, Serialize, Debug)]
 pub struct ExerciseCheckList {
     pub statistics: ExerciseStatistics
 }
 
 #[tokio::main]
 async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
-    // 定义任务及其分数情况
-    let mut test_map = HashMap::<String, Solution>::new();
-    test_map.insert("solutiont1".to_owned(),  Solution{ score:  5, test: "solutiont1".to_string()});
-    test_map.insert("solutiont2".to_owned(),  Solution{ score: 10, test: "solutiont2".to_string()});
-    test_map.insert("solutiont3".to_owned(),  Solution{ score: 10, test: "solutiont3".to_string()});
-    test_map.insert("solutiont4".to_owned(),  Solution{ score: 10, test: "solutiont4".to_string()});
-    test_map.insert("solutiont5".to_owned(),  Solution{ score: 10, test: "solutiont5".to_string()});
-    test_map.insert("solutiont6".to_owned(),  Solution{ score: 10, test: "solutiont6".to_string()});
-    test_map.insert("solutiont7".to_owned(),  Solution{ score: 10, test: "solutiont7".to_string()});
-    test_map.insert("solutiont8".to_owned(),  Solution{ score: 10, test: "solutiont8".to_string()});
-    test_map.insert("solutiont9".to_owned(),  Solution{ score: 10, test: "solutiont9".to_string()});
-    test_map.insert("solutiont10".to_owned(), Solution{ score: 15, test: "solutiont10".to_string()});
+
+    let toml_str = &fs::read_to_string("info.toml").unwrap();
+    let exercises = toml::from_str::<ExerciseList>(toml_str).unwrap().exercises;
 
     // 得分统计
     let exercise_check_list = Arc::new(Mutex::new(
@@ -54,14 +49,13 @@ async fn main() -> Result<(), Box<dyn std::error::Error + Send + Sync>> {
 
     // 异步执行所有测试
     let mut tasks = Vec::new();
-    for (key, solution) in test_map {
-        // 每个solution的结果都需要写入，需要clone避免写竞争
-        let exercise_check_list_ref = Arc::clone(&exercise_check_list);
-        let score = solution.score;
 
-        // 执行topic1目录下每个solutiont(x)的测试代码
+    for exercise in exercises {
+        let exercise_check_list_ref = Arc::clone(&exercise_check_list);
+        let score = exercise.score;
+        fs::write(format!("topic1/{}/src/tests.rs", exercise.path), exercise.test).unwrap();
         let task = tokio::task::spawn(async move {
-            run_test(&key, score, Arc::clone(&exercise_check_list_ref)).await
+            run_test(&exercise.path, score, Arc::clone(&exercise_check_list_ref)).await
         });
         tasks.push(task);
     }

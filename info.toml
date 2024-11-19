@@ -1,0 +1,438 @@
+[[exercises]]
+path = "solutiont1"
+score = 5
+test = """
+// src/tests.rs
+mod conjecture;
+
+#[cfg(test)]
+mod tests {
+    use super::conjecture::goldbach_conjecture;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    // 196702;
+    const TEST_CASE: u64 = 11770;
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_conjecture() {
+        let start = Instant::now();
+        let result = goldbach_conjecture();
+        let duration = start.elapsed();
+
+        // 时间超0.5s，判定不合格
+        let mut total_score = 0.0;
+        if duration <= Duration::from_millis(500) && result == TEST_CASE {
+            total_score += 100.0;
+        }
+
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont2"
+score = 10
+test = """mod district;
+#[cfg(test)]
+mod tests {
+    use super::district::count_provinces;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASE: &str = "3,3,2,2,1";
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_count_provinces() {
+        let start = Instant::now();
+        let result = count_provinces();
+        let duration = start.elapsed();
+
+        // 时间超1s，判定不合格
+        let mut total_score = 0.0;
+        if duration <= Duration::new(1, 0) && result == TEST_CASE {
+            total_score += 100.0;
+        }
+
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont3"
+score = 10
+test = """// src/tests.rs
+mod calc_time;
+
+#[cfg(test)]
+mod tests {
+    use super::calc_time::time_info;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(&str, &str)] = &[
+        ("2024-11-10", "45,51,79"),
+        ("2024-11-18", "47,42,70"),
+        ("2024-12-31", "1,0,28"),
+        ("2025-01-01", "1,364,27"),
+        ("2025-12-31", "1,0,47"),
+        ("2020-01-20", "4,346,4"),
+        ("2021-02-13", "6,321,352"),
+        ("2012-01-22", "3,344,0"),
+        ("2013-02-11", "7,323,353"),
+        ("2014-02-02", "5,332,381"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_calc_time() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = time_info(*input);
+            let duration = start.elapsed();
+
+            // 时间超0.2s，判定不合格
+            if duration <= Duration::from_millis(200) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont4"
+score = 10
+test = """// src/tests.rs
+mod wade_giles_romanization;
+
+#[cfg(test)]
+mod tests {
+    use super::wade_giles_romanization::converter;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(&str, &str)] = &[
+        ("中国", "Chung kuo"),
+        ("@", ""),
+        ("诸葛亮", "Chu ko liang"),
+        ("孙中山", "Sun chung shan"),
+        ("台湾", "T'ai wan"),
+        ("香港", "Hsiang kang"),
+        ("澳門", "Ao men"),
+        ("川普", "Ch'uan p'u"),
+        ("四川", "Ssu ch'uan"),
+        ("廣州", "Kuang chou"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_wadegiles() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = converter(*input);
+            let duration = start.elapsed();
+
+            // 时间超0.5s，判定不合格
+            if duration <= Duration::from_millis(500) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont5"
+score = 10
+test = """// src/tests.rs
+mod retirement;
+
+#[cfg(test)]
+mod tests {
+    use super::retirement::retire_time;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(&str, &str, &str)] = &[
+        ("1971-04", "原法定退休年龄55周岁女职工", "2026-08,55.33,4"),
+        ("1995-12", "原法定退休年龄50周岁女职工", "2050-12,55,60"),
+        ("1995-12", "男职工", "2058-12,63,36"),
+        ("2000-12", "原法定退休年龄55周岁女职工", "2058-12,58,36"),
+        ("2000-12", "男职工", "2063-12,63,36"),
+        ("1965-12", "男职工", "2026-03,60.25,3"),
+        ("1963-12", "男职工", "2023-12,60,0"),
+        ("1963-04", "原法定退休年龄55周岁女职工", "2018-04,55,0"),
+        ("1964-02", "男职工", "2024-02,60,0"),
+        ("1965-01", "男职工", "2025-02,60.08,1"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_retirement_time() {
+        let mut total_score = 0.0;
+        for (time, tp, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = retire_time(*time, *tp);
+            let duration = start.elapsed();
+
+            // 时间超0.2s，判定不合格
+            if duration <= Duration::from_millis(200) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont6"
+score = 10
+test = """// src/tests.rs
+mod simple2traditional;
+
+#[cfg(test)]
+mod tests {
+    use super::simple2traditional::converter;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(&str, &str, &str)] = &[
+        ("学习", "s2t", "學習"),
+        ("老板", "s2t", "老闆"),
+        ("四川", "s2t", "四川"),
+        ("四川", "t2s", "四川"),
+        ("头发", "s2t", "頭髮"),
+        ("发财", "s2t", "發財"),
+        ("皇后", "s2t", "皇后"),
+        ("前后", "s2t", "前後"),
+        ("搜刮", "s2t", "搜刮"),
+        ("xx", "t2s", "xx"),
+        ("", "t2s", ""),
+        ("@", "t2s", "@"),
+        ("0", "t2s", "0"),
+        ("魏征", "s2t", "魏徵"),
+        ("魏征", "t2s", "魏征"),
+        ("面条", "s2t", "麵條"),
+        ("小麥", "s2t", "小麥"),
+        ("树干", "s2t", "樹幹"),
+        ("干涉", "s2t", "干涉"),
+        ("子丑寅卯", "s2t", "子丑寅卯"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_s2t_or_t2s() {
+        let mut total_score = 0.0;
+        for (input, tp, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = converter(*input, *tp);
+            let duration = start.elapsed();
+
+            // 时间超0.5s，判定不合格
+            if duration <= Duration::from_millis(500) && result == *expected {
+                total_score += 5.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont7"
+score = 10
+test = """// src/tests.rs
+mod identity_card;
+
+#[cfg(test)]
+mod tests {
+    use super::identity_card::check_id_card;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    // 申明：随机生成的测试身份证号，仅限测试使用，任何人不得盗用，违者按法律严惩！
+    const TEST_CASES: &[(&str, &str)] = &[
+        ("420111198203251029", "身份证号码正确,女,1982年03月25日,湖北省-武汉市-洪山区"),
+        ("11000019900101001X", "身份证号码错误"),
+        ("370725881105149", "身份证号码正确,男,1988年11月05日,山东省-潍坊市-昌乐县"),
+        ("37072519881105149X", "身份证号码正确,男,1988年11月05日,山东省-潍坊市-昌乐县"),
+        ("@", "身份证号码错误"),
+        ("1101021990010110140", "身份证号码错误"),
+        ("110102199001011014", "身份证号码正确,男,1990年01月01日,北京市-市辖区-西城区"),
+        ("510303199009142328", "身份证号码正确,女,1990年09月14日,四川省-自贡市-贡井区"),
+        ("320106199002071259", "身份证号码正确,男,1990年02月07日,江苏省-南京市-鼓楼区"),
+        ("310104199007122348", "身份证号码正确,女,1990年07月12日,上海市-市辖区-徐汇区"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_id_card_check() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = check_id_card(*input);
+            let duration = start.elapsed();
+
+            // 时间超0.5s，判定不合格
+            if duration <= Duration::from_millis(500) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont8"
+score = 10
+test = """// src/tests.rs
+mod prime_factor;
+
+#[cfg(test)]
+mod tests {
+    use super::prime_factor::find_max_prime_factor;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(u128, u128)] = &[
+        (10000071, 370373),
+        (600851475143, 6857),
+        (1600851475143, 16807369),
+        (76008514751430, 2163013),
+        (96008514751430, 223275615701),
+        (99999999951437, 5218879),
+        (1199999999951437, 3945019577),
+        (9999999999999951437,387792298444951),
+        (97993999919999958437, 203729729563409477),
+        (199999999999999951437, 9523809523809521497),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_max_prime_factor() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = find_max_prime_factor(*input);
+            let duration = start.elapsed();
+
+            // 时间超3s，判定不合格
+            if duration <= Duration::new(3, 0) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont9"
+score = 10
+test = """// src/tests.rs
+mod spiral_prime;
+
+#[cfg(test)]
+mod tests {
+    use super::spiral_prime::min_edge_prime_num;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(u32, &str)] = &[
+        (60, "5,5"),
+        (55, "9,9"),
+        (50, "11,10"),
+        (40, "31,23"),
+        (30, "49,28"),
+        (20, "309,123"),
+        (10, "26241,5248"),
+        (9,  "74373,13387"),
+        (8,  "238733,38197"),
+        (7,  "1213001,169820"),
+    ];
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_prime_percent() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = min_edge_prime_num(*input);
+            let duration = start.elapsed();
+
+            // 时间超6s，判定不合格
+            if duration <= Duration::new(6, 0) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
+
+[[exercises]]
+path = "solutiont10"
+score = 15
+test = """// src/tests.rs
+mod zuc_encryption;
+
+#[cfg(test)]
+mod tests {
+    use super::zuc_encryption::encryption;
+    use std::time::{Instant, Duration};
+
+    // 定义测试用例和预期结果
+    const TEST_CASES: &[(&str, &str)] = &[
+        ("特朗普", "/QZb7S0JWp8="),
+        ("吉普车", "/x9r7SgwVLs="),
+        ("中国人", "/jdP7iojWLw="),
+        ("RustRover", "SPqRf+PxymM="),
+        ("@####", "WqzBKA=="),
+        ("0", ""),
+        ("深心托豪素,怀抱观古今", "/DhT7g4dWo/QW9MZ1Mz5asg3lTdoQFt4ga9FMQ=="),
+        ("境外势力", "/y1h7hUIWYz3Vugo"),
+        ("信息化数字化智能化", "/jBD7TAxWYreVfcD1tXOo6Ih80hYGTBi"),
+        ("Talk is cheap, show me the code", "Tu6OYJH3zyYr2wfSQ1R5NUbYYvGPlJOray/q9g=="),
+    ];
+
+
+    // 定义一个测试函数来验证每个测试用例
+    #[test]
+    fn test_zuc_encryption() {
+        let mut total_score = 0.0;
+        for (input, expected) in TEST_CASES {
+            let start = Instant::now();
+            let result = encryption((*input).to_string());
+            let duration = start.elapsed();
+
+            // 时间超0.2s，判定不合格
+            if duration <= Duration::from_millis(200) && result == *expected {
+                total_score += 10.0;
+            }
+        }
+        println!("Total score: {:.2}", total_score);
+        assert_eq!(100.00, total_score);
+    }
+}
+"""
