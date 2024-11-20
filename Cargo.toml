@@ -8,6 +8,7 @@ edition = "2021"
 members= [
     "exercises/*",
     "topic1/*",
+    "crates/*",
     "."
 ]
 
