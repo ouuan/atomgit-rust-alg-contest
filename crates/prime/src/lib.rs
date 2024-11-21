@@ -60,7 +60,7 @@ const fn qmul(mut a: u128, mut b: u128, m: u128) -> u128 {
     ans
 }
 
-const fn qpow(mut a: u128, mut b: u128, m: u128) -> u128 {
+const fn qpow_128(mut a: u128, mut b: u128, m: u128) -> u128 {
     let mut ans = 1;
     while b > 0 {
         if b & 1 == 1 {
@@ -72,21 +72,20 @@ const fn qpow(mut a: u128, mut b: u128, m: u128) -> u128 {
     ans
 }
 
-const MILLER_RABIN_TEST_TIMES: usize = 12;
-
 /// Test if `n` is a prime number using the Miller-Rabin primality test.
 ///
 /// # Example
 ///
 /// ```
-/// use prime::miller_rabin;
+/// use prime::miller_rabin_128;
 ///
-/// assert_eq!(miller_rabin(1), false);
-/// assert_eq!(miller_rabin(2), true);
-/// assert_eq!(miller_rabin(91), false);
-/// assert_eq!(miller_rabin(998244353), true);
+/// assert_eq!(miller_rabin_128(1), false);
+/// assert_eq!(miller_rabin_128(2), true);
+/// assert_eq!(miller_rabin_128(91), false);
+/// assert_eq!(miller_rabin_128(998244353), true);
 /// ```
-pub fn miller_rabin(n: u128) -> bool {
+pub fn miller_rabin_128(n: u128) -> bool {
+    const TEST_TIMES: usize = 16;
     match n {
         0 | 1 => return false,
         2 | 3 => return true,
@@ -96,15 +95,56 @@ pub fn miller_rabin(n: u128) -> bool {
     let t = d.trailing_zeros();
     let u = d >> t;
     let mut rng = thread_rng();
-    (0..MILLER_RABIN_TEST_TIMES).all(|_| {
+    (0..TEST_TIMES).all(|_| {
         let a = rng.gen_range(2..=n - 2);
-        let mut v = qpow(a, u, n);
+        let mut v = qpow_128(a, u, n);
         if v == 1 || v == n - 1 {
             return true;
         }
         (1..t).any(|_| {
             v = qmul(v, v, n);
             v == n - 1
+        })
+    })
+}
+
+const fn qpow_64(a: u64, mut b: u64, m: u64) -> u64 {
+    let mut a = a as u128;
+    let m = m as u128;
+    let mut ans = 1;
+    while b > 0 {
+        if b & 1 == 1 {
+            ans = ans * a % m;
+        }
+        a = a * a % m;
+        b >>= 1;
+    }
+    ans as u64
+}
+
+/// Much faster version of `miller_rabin_128` for `u64`.
+pub fn miller_rabin_64(n: u64) -> bool {
+    const TESTERS: [u64; 7] = [2, 325, 9375, 28178, 450775, 9780504, 1795265022];
+    match n {
+        0 | 1 => return false,
+        2 | 3 => return true,
+        _ => {}
+    }
+    let d = n - 1;
+    let t = d.trailing_zeros();
+    let u = d >> t;
+    TESTERS.iter().all(|&a| {
+        let a = a % n;
+        if a == 0 || a == 1 || a == n - 1 {
+            return true;
+        }
+        let mut v = qpow_64(a, u, n) as u128;
+        if v == 1 || v as u64 == n - 1 {
+            return true;
+        }
+        (1..t).any(|_| {
+            v = v * v % n as u128;
+            v as u64 == n - 1
         })
     })
 }
@@ -160,7 +200,7 @@ fn factor_with_max(n: u128, max: &mut u128) {
     if n <= *max {
         return;
     }
-    if miller_rabin(n) {
+    if miller_rabin_128(n) {
         *max = n;
         return;
     }
@@ -209,16 +249,25 @@ mod tests {
     fn test_miller_rabin() {
         let (is_prime, _) = prime_sieve(200000);
         for (i, &is_prime) in is_prime.iter().enumerate() {
-            assert_eq!(miller_rabin(i as u128), is_prime);
+            assert_eq!(miller_rabin_128(i as u128), is_prime);
         }
     }
 
     #[test]
-    fn miller_rabin_perf() {
+    fn miller_rabin_128_perf() {
         let mut rng = thread_rng();
-        for _ in 0..1000 {
-            let n = rng.gen_range(0..1 << 127);
-            miller_rabin(n);
+        for _ in 0..2000 {
+            let n = rng.gen_range(0..=u128::MAX);
+            miller_rabin_128(n);
+        }
+    }
+
+    #[test]
+    fn miller_rabin_64_perf() {
+        let mut rng = thread_rng();
+        for _ in 0..1000000 {
+            let n = rng.gen_range(0..=u64::MAX);
+            miller_rabin_64(n);
         }
     }
 
@@ -227,7 +276,7 @@ mod tests {
         let mut rng = thread_rng();
         for _ in 0..100 {
             let n = rng.gen_range(2..1 << 80);
-            if !miller_rabin(n) {
+            if !miller_rabin_128(n) {
                 pollard_rho(n, &mut rng);
             }
         }
