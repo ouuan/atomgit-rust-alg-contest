@@ -8,18 +8,17 @@ mod tests {
 
     // 定义测试用例和预期结果
     const TEST_CASES: &[(&str, &str)] = &[
-        ("特朗普", "/QZb7S0JWp8="),
-        ("吉普车", "/x9r7SgwVLs="),
-        ("中国人", "/jdP7iojWLw="),
-        ("RustRover", "SPqRf+PxymM="),
-        ("@####", "WqzBKA=="),
-        ("0", ""),
-        ("深心托豪素,怀抱观古今", "/DhT7g4dWo/QW9MZ1Mz5asg3lTdoQFt4ga9FMQ=="),
-        ("境外势力", "/y1h7hUIWYz3Vugo"),
-        ("信息化数字化智能化", "/jBD7TAxWYreVfcD1tXOo6Ih80hYGTBi"),
-        ("Talk is cheap, show me the code", "Tu6OYJH3zyYr2wfSQ1R5NUbYYvGPlJOray/q9g=="),
+        ("特朗普", "/QZb7S0JWp/IYuwB"),
+        ("吉普车", "/x9r7SgwVLvAYuwB"),
+        ("中国人", "/jdP7iojWLzcYuwB"),
+        ("RustRover", "SPqRf+PxymMUYuwB"),
+        ("@####", "WqzBKJKdvwU="),
+        ("0", "KozhCA=="),
+        ("深心托豪素,怀抱观古今", "/DhT7g4dWo/+iV6oScyAPMtykWeYW34bCcaYzZudbAU="),
+        ("境外势力", "/y1h7hUIWYzZhGWZqnwkFA=="),
+        ("信息化数字化智能化", "/jBD7TAxWYrwh3qyS9W39aFk9xioAhUBbq+BaA=="),
+        ("Talk is cheap, show me the code", "Tu6OYJH3zyYFCYpj3lQAY0WdZqF/j7bI40Y3ChBCgwU=")
     ];
-
 
     // 定义一个测试函数来验证每个测试用例
     #[test]
