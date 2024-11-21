@@ -1,3 +1,6 @@
+use rand::prelude::*;
+use std::iter;
+
 /// This function implements a linear time complexity prime sieve that identifies all prime numbers
 /// up to the given limit.
 ///
@@ -45,6 +48,136 @@ pub fn prime_sieve(until: u32) -> (Vec<bool>, Vec<u32>) {
     (is_prime, primes)
 }
 
+const fn qmul(mut a: u128, mut b: u128, m: u128) -> u128 {
+    let mut ans = 0;
+    while b > 0 {
+        if b & 1 == 1 {
+            ans = (ans + a) % m;
+        }
+        a = (a + a) % m;
+        b >>= 1;
+    }
+    ans
+}
+
+const fn qpow(mut a: u128, mut b: u128, m: u128) -> u128 {
+    let mut ans = 1;
+    while b > 0 {
+        if b & 1 == 1 {
+            ans = qmul(ans, a, m);
+        }
+        a = qmul(a, a, m);
+        b >>= 1;
+    }
+    ans
+}
+
+const MILLER_RABIN_TEST_TIMES: usize = 12;
+
+/// Test if `n` is a prime number using the Miller-Rabin primality test.
+///
+/// # Example
+///
+/// ```
+/// use prime::miller_rabin;
+///
+/// assert_eq!(miller_rabin(1), false);
+/// assert_eq!(miller_rabin(2), true);
+/// assert_eq!(miller_rabin(91), false);
+/// assert_eq!(miller_rabin(998244353), true);
+/// ```
+pub fn miller_rabin(n: u128) -> bool {
+    match n {
+        0 | 1 => return false,
+        2 | 3 => return true,
+        _ => {}
+    }
+    let d = n - 1;
+    let t = d.trailing_zeros();
+    let u = d >> t;
+    let mut rng = thread_rng();
+    (0..MILLER_RABIN_TEST_TIMES).all(|_| {
+        let a = rng.gen_range(2..=n - 2);
+        let mut v = qpow(a, u, n);
+        if v == 1 || v == n - 1 {
+            return true;
+        }
+        (1..t).any(|_| {
+            v = qmul(v, v, n);
+            v == n - 1
+        })
+    })
+}
+
+fn gcd(a: u128, b: u128) -> u128 {
+    if b == 0 {
+        a
+    } else {
+        gcd(b, a % b)
+    }
+}
+
+fn pollard_rho<R: Rng>(n: u128, rng: &mut R) -> u128 {
+    let c = rng.gen_range(1..n);
+    let mut t = 0;
+    for len in iter::successors(Some(2), |x| Some(x * 2)) {
+        let s = t;
+        let mut prod = 1;
+        for step in 1..=len {
+            t = (qmul(t, t, n) + c) % n;
+            prod = qmul(prod, t.abs_diff(s), n);
+            if step % 127 == 0 || step == len {
+                let d = gcd(prod, n);
+                if d > 1 {
+                    return d;
+                }
+            }
+        }
+    }
+    unreachable!()
+}
+
+/// Find the maximum prime factor of `n`. Returns `1` for 0 and 1.
+///
+/// # Example
+///
+/// ```
+/// use prime::max_factor;
+///
+/// assert_eq!(max_factor(0), 1);
+/// assert_eq!(max_factor(1), 1);
+/// assert_eq!(max_factor(6), 3);
+/// assert_eq!(max_factor(37), 37);
+/// assert_eq!(max_factor(91), 13);
+/// ```
+pub fn max_factor(n: u128) -> u128 {
+    let mut max = 1;
+    factor_with_max(n, &mut max);
+    max
+}
+
+fn factor_with_max(n: u128, max: &mut u128) {
+    if n <= *max {
+        return;
+    }
+    if miller_rabin(n) {
+        *max = n;
+        return;
+    }
+    let mut rng = thread_rng();
+    let d = iter::repeat_with(|| pollard_rho(n, &mut rng))
+        .find(|&d| d != n)
+        .unwrap();
+    let e = iter::successors(
+        Some(n / d),
+        |&x| if x % d == 0 { Some(x / d) } else { None },
+    )
+    .last()
+    .unwrap();
+    factor_with_max(d, max);
+    factor_with_max(e, max);
+}
+
 #[cfg(test)]
 mod tests {
     use super::*;
@@ -67,8 +200,65 @@ mod tests {
         for i in 0..100 {
             assert_eq!(prime_sieve(i), brute_force_prime_sieve(i));
         }
-        for i in (100..1000).step_by(100) {
+        for i in (100..10000).step_by(100) {
             assert_eq!(prime_sieve(i), brute_force_prime_sieve(i));
+        }
+    }
+
+    #[test]
+    fn test_miller_rabin() {
+        let (is_prime, _) = prime_sieve(200000);
+        for (i, &is_prime) in is_prime.iter().enumerate() {
+            assert_eq!(miller_rabin(i as u128), is_prime);
+        }
+    }
+
+    #[test]
+    fn miller_rabin_perf() {
+        let mut rng = thread_rng();
+        for _ in 0..1000 {
+            let n = rng.gen_range(0..1 << 127);
+            miller_rabin(n);
+        }
+    }
+
+    #[test]
+    fn pollard_rho_perf() {
+        let mut rng = thread_rng();
+        for _ in 0..100 {
+            let n = rng.gen_range(2..1 << 80);
+            if !miller_rabin(n) {
+                pollard_rho(n, &mut rng);
+            }
+        }
+    }
+
+    fn brute_force_max_factor(n: u32, is_prime: &[bool], primes: &[u32]) -> u32 {
+        let mut x = n;
+        for &p in primes {
+            while x % p == 0 {
+                x /= p;
+            }
+            if x == 1 {
+                return p;
+            }
+            if is_prime[x as usize] {
+                return x;
+            }
+        }
+        unreachable!()
+    }
+
+    #[test]
+    fn test_max_factor() {
+        const N: u32 = 50000;
+        let (is_prime, primes) = prime_sieve(N);
+        for i in 2..N {
+            assert_eq!(
+                max_factor(i as u128) as u32,
+                brute_force_max_factor(i, &is_prime, &primes),
+                "failed for {i}"
+            );
         }
     }
 }
