@@ -310,4 +310,11 @@ mod tests {
             );
         }
     }
+
+    #[test]
+    fn max_factor_perf() {
+        assert_eq!(max_factor(680207505711764507977), 33941217091);
+        assert_eq!(max_factor(739551621235312646143), 30756477229);
+        assert_eq!(max_factor(3183627274266828089483), 57996878441);
+    }
 }
