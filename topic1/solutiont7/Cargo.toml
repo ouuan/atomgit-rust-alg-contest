@@ -4,6 +4,7 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+resident-id = { version = "0.1.0", path = "../../crates/resident-id" }
 
 [[test]]
 name = "tests"
