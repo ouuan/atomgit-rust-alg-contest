@@ -138,7 +138,16 @@ impl FromStr for ResidentId {
         let province = DIVISION_MAP
             .get(&(code - code % 10000))
             .ok_or(IdError::AreaNotFound)?;
-        let city = DIVISION_MAP.get(&(code - code % 100)).unwrap_or(&"市辖区");
+        let city = DIVISION_MAP
+            .get(&(code - code % 100))
+            .copied()
+            .or(match code / 100 % 100 {
+                1 => Some("市辖区"),
+                2 => Some("县"),
+                90 => Some("省直辖县级行政区划"),
+                _ => None,
+            })
+            .ok_or(IdError::AreaNotFound)?;
         let area = DIVISION_MAP.get(&code).ok_or(IdError::AreaNotFound)?;
         let birthday =
             Date::try_new(birth_year, birth_month, birth_day).or(Err(IdError::InvalidDate))?;
@@ -156,5 +165,30 @@ impl FromStr for ResidentId {
             serial,
             gender,
         })
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn test_data_hierarchy() {
+        for (&code, area) in DIVISION_MAP.iter() {
+            let province_code = code - code % 10000;
+            assert!(DIVISION_MAP.get(&province_code).is_some());
+            let city_code = code - code % 100;
+            if DIVISION_MAP.get(&city_code).is_none() {
+                match code / 100 % 100 {
+                    1 => assert!(
+                        area.ends_with("区") || area.ends_with("城"),
+                        "{code} {area}"
+                    ),
+                    2 => assert!(area.ends_with("县"), "{code} {area}"),
+                    90 => (),
+                    _ => panic!("unknown city: {code} {area}"),
+                }
+            }
+        }
     }
 }
