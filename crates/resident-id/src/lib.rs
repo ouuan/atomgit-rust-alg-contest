@@ -77,6 +77,7 @@ impl ResidentId {
     }
 }
 
+#[derive(Debug)]
 pub enum IdError {
     InvalidLength,
     InvalidCharacter,
@@ -117,10 +118,15 @@ impl FromStr for ResidentId {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (id_type, birth_year, birth_month, birth_day, serial) = match s.len() {
             15 => {
-                let birth_year = s[6..8].parse::<u32>().or(Err(IdError::InvalidCharacter))? + 1900;
+                let partial_year = s[6..8].parse::<u32>().or(Err(IdError::InvalidCharacter))?;
                 let birth_month = s[8..10].parse().or(Err(IdError::InvalidCharacter))?;
                 let birth_day = s[10..12].parse().or(Err(IdError::InvalidCharacter))?;
                 let serial = s[12..15].parse().or(Err(IdError::InvalidCharacter))?;
+                let birth_year = if serial >= 996 {
+                    partial_year + 1800
+                } else {
+                    partial_year + 1900
+                };
                 (IdType::V1, birth_year, birth_month, birth_day, serial)
             }
             18 => {
@@ -144,7 +150,15 @@ impl FromStr for ResidentId {
             .or(match code / 100 % 100 {
                 1 => Some("市辖区"),
                 2 => Some("县"),
-                90 => Some("省直辖县级行政区划"),
+                90 => {
+                    if province.ends_with("省") {
+                        Some("省直辖县级行政区划")
+                    } else if province.ends_with("自治区") {
+                        Some("自治区直辖县级行政区划")
+                    } else {
+                        None
+                    }
+                }
                 _ => None,
             })
             .ok_or(IdError::AreaNotFound)?;
@@ -176,7 +190,9 @@ mod tests {
     fn test_data_hierarchy() {
         for (&code, area) in DIVISION_MAP.iter() {
             let province_code = code - code % 10000;
-            assert!(DIVISION_MAP.get(&province_code).is_some());
+            let province = DIVISION_MAP
+                .get(&province_code)
+                .expect("province not found");
             let city_code = code - code % 100;
             if DIVISION_MAP.get(&city_code).is_none() {
                 match code / 100 % 100 {
@@ -185,10 +201,49 @@ mod tests {
                         "{code} {area}"
                     ),
                     2 => assert!(area.ends_with("县"), "{code} {area}"),
-                    90 => (),
+                    90 => assert!(
+                        province.ends_with("省") || province.ends_with("自治区"),
+                        "{code} {area} ({province})"
+                    ),
                     _ => panic!("unknown city: {code} {area}"),
                 }
             }
         }
+    }
+
+    #[test]
+    fn test_area() {
+        let id: ResidentId = "11010119900101004X".parse().unwrap();
+        assert_eq!(id.province(), "北京市");
+        assert_eq!(id.city(), "市辖区");
+        assert_eq!(id.area(), "东城区");
+        let id: ResidentId = "130102199001010015".parse().unwrap();
+        assert_eq!(id.province(), "河北省");
+        assert_eq!(id.city(), "石家庄市");
+        assert_eq!(id.area(), "长安区");
+        let id: ResidentId = "50024219000101001X".parse().unwrap();
+        assert_eq!(id.province(), "重庆市");
+        assert_eq!(id.city(), "县");
+        assert_eq!(id.area(), "酉阳土家族苗族自治县");
+        let id: ResidentId = "419001190102030042".parse().unwrap();
+        assert_eq!(id.province(), "河南省");
+        assert_eq!(id.city(), "省直辖县级行政区划");
+        assert_eq!(id.area(), "济源市");
+        let id: ResidentId = "659011191111111110".parse().unwrap();
+        assert_eq!(id.province(), "新疆维吾尔自治区");
+        assert_eq!(id.city(), "自治区直辖县级行政区划");
+        assert_eq!(id.area(), "新星市");
+    }
+
+    #[test]
+    fn test_birth_year() {
+        let id: ResidentId = "11010119900101004X".parse().unwrap();
+        assert_eq!(id.birthday().year(), 1990);
+        let id: ResidentId = "110101900101001".parse().unwrap();
+        assert_eq!(id.birthday().year(), 1990);
+        let id: ResidentId = "110101900101996".parse().unwrap();
+        assert_eq!(id.birthday().year(), 1890);
+        let id: ResidentId = "110101000101995".parse().unwrap();
+        assert_eq!(id.birthday().year(), 1900);
     }
 }
