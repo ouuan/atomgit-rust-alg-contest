@@ -28,7 +28,7 @@ jobs:
         echo $(pwd)
         target_dir="RustContestLab2$atomgit_user"
         cp -R ./$dirname/ ./$target_dir
-        tar -zcvf RustContestLab2$atomgit_user.tgz --exclude=.git $target_dir
+        tar -zcvf RustContestLab2$atomgit_user.tgz --exclude='.*' $target_dir
         echo $(ls -l)
     - name: Post File remote API
       env:
