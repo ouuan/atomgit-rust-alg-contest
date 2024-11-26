@@ -4,6 +4,8 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+base64 = "0.22.1"
+zuc = { version = "0.1.0", path = "../../crates/zuc" }
 
 [[test]]
 name = "tests"
