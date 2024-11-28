@@ -28,7 +28,7 @@ jobs:
         echo $(pwd)
         target_dir="RustContestLab2$atomgit_user"
         cp -R ./$dirname/ ./$target_dir
-        tar -zcvf RustContestLab2$atomgit_user.tgz --exclude='.*' $target_dir
+        tar caf RustContestLab2$atomgit_user.txz --exclude='.*' $target_dir
         echo $(ls -l)
     - name: Post File remote API
       env:
@@ -38,5 +38,5 @@ jobs:
         echo $(ls -l)
         curl -X POST 'http://rs.livstyle.cn/api/alg-file' \
         -F "username=$atomgit_user" \
-        -F "file=@$(pwd)/RustContestLab2$atomgit_user.tgz" \
+        -F "file=@$(pwd)/RustContestLab2$atomgit_user.txz" \
         -v
