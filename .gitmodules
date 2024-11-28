@@ -1,0 +1,6 @@
+[submodule "crates/pinyin/phrase-pinyin-data"]
+	path = crates/pinyin/phrase-pinyin-data
+	url = https://github.com/mozillazg/phrase-pinyin-data
+[submodule "crates/pinyin/pinyin-data"]
+	path = crates/pinyin/pinyin-data
+	url = https://github.com/mozillazg/pinyin-data

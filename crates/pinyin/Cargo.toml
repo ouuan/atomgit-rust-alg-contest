@@ -1,0 +1,11 @@
+[package]
+name = "pinyin"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+max-match-segmentation = { version = "0.1.0", path = "../max-match-segmentation" }
+
+[[bin]]
+name = "build-data"
+path = "src/build-data.rs"
