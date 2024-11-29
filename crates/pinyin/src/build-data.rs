@@ -1,3 +1,5 @@
+use std::collections::hash_map::Entry;
+use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
@@ -81,9 +83,31 @@ fn main() {
         .filter_map(parse_character_rule)
         .chain(PHRASE_DICT.lines().filter_map(parse_phrase_rule));
 
+    let mut map = HashMap::new();
+    let mut homophone = HashSet::new();
+
+    for (phrase, pinyin) in rules.clone() {
+        assert_eq!(phrase.chars().count(), pinyin.split_whitespace().count());
+        for (c, p) in phrase.chars().zip(pinyin.split_whitespace()) {
+            match map.entry(c) {
+                Entry::Vacant(entry) => {
+                    entry.insert(p.to_string());
+                }
+                Entry::Occupied(entry) => {
+                    if entry.get() != p {
+                        homophone.insert(c);
+                    }
+                }
+            }
+        }
+    }
+
     let file = File::create("data/dict.txt").unwrap();
     let mut writer = BufWriter::new(file);
     for (phrase, pinyin) in rules {
+        if phrase.chars().count() > 1 && phrase.chars().all(|c| !homophone.contains(&c)) {
+            continue;
+        }
         writer.write_all(phrase.as_bytes()).unwrap();
         writer.write_all(b":").unwrap();
         writer.write_all(pinyin.as_bytes()).unwrap();
