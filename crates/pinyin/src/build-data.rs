@@ -4,7 +4,7 @@ use std::fs::File;
 use std::io::{BufWriter, Write};
 
 const CHARACTER_DICT: &str = include_str!("../pinyin-data/pinyin.txt");
-const PHRASE_DICT: &str = include_str!("../phrase-pinyin-data/pinyin.txt");
+const PHRASE_DICT: &str = include_str!("../phrase-pinyin-data/large_pinyin.txt");
 
 const TONES: &[(&str, &str)] = &[
     ("ā", "a"),
