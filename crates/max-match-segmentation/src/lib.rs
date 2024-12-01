@@ -34,13 +34,12 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        let mut phrase = phrase.into_iter();
-        let mut node = self
-            .root
-            .entry(phrase.next().expect("empty phrase"))
-            .or_default();
-        for c in phrase {
-            node = node.children.entry(c).or_default();
+        let mut tokens = phrase.into_iter();
+        let first_token = tokens.next().expect("empty phrase");
+
+        let mut node = self.root.entry(first_token).or_default();
+        for token in tokens {
+            node = node.children.entry(token).or_default();
         }
         node.attr = Some(attr);
     }
@@ -50,43 +49,47 @@ where
     where
         I: IntoIterator<Item = T>,
     {
-        let mut stack = sentence.into_iter().collect::<Vec<_>>();
-        let total_len = stack.len();
+        let mut token_stack = Vec::from_iter(sentence);
+        let total_len = token_stack.len();
         let mut r = 0;
-        stack.reverse();
+        token_stack.reverse();
 
         std::iter::from_fn(move || {
             let l = r;
             r += 1;
-            let first_token = stack.pop()?;
-            let mut node = match self.root.get(&first_token) {
-                Some(node) => node,
-                None => return Some(Segment::Unmatched(first_token, l)),
+
+            let first_token = token_stack.pop()?;
+            let Some(mut node) = self.root.get(&first_token) else {
+                return Some(Segment::Unmatched(first_token, l));
             };
-            let mut match_item = match &node.attr {
-                Some(attr) => Segment::Match(attr, (l, r)),
-                None => Segment::Unmatched(first_token, l),
-            };
-            for (i, token) in stack.iter().rev().enumerate() {
+
+            let mut longest_match = node
+                .attr
+                .as_ref()
+                .map(|attr| Segment::Match(attr, (l, r)))
+                .unwrap_or_else(|| Segment::Unmatched(first_token, l));
+
+            for (i, token) in token_stack.iter().rev().enumerate() {
                 if let Some(child) = node.children.get(token) {
-                    if let Some(value) = &child.attr {
+                    if let Some(attr) = &child.attr {
                         r = l + i + 2;
-                        match_item = Segment::Match(value, (l, r));
+                        longest_match = Segment::Match(attr, (l, r));
                     }
                     node = child;
                 } else {
                     break;
                 }
             }
-            stack.truncate(total_len - r);
-            Some(match_item)
+
+            token_stack.truncate(total_len - r);
+            Some(longest_match)
         })
     }
 }
 
 impl<T, V> Default for Fmm<T, V> {
     fn default() -> Self {
-        Fmm {
+        Self {
             root: HashMap::new(),
         }
     }
@@ -100,7 +103,7 @@ impl<T, V> Fmm<T, V> {
 
 impl<T, V> Default for Node<T, V> {
     fn default() -> Self {
-        Node {
+        Self {
             attr: None,
             children: HashMap::new(),
         }
@@ -124,18 +127,19 @@ pub trait StringSegmentation<V> {
     {
         let mut remaining = sentence;
         let mut segs = self.segmentation(sentence);
+
         std::iter::from_fn(move || {
             let len = match segs.next()? {
                 Segment::Match(_, (l, r)) => r - l,
                 Segment::Unmatched(_, _) => 1,
             };
-            match remaining.char_indices().nth(len) {
-                None => Some(remaining),
-                Some((index, _)) => {
-                    let (l, r) = remaining.split_at(index);
-                    remaining = r;
-                    Some(l)
-                }
+
+            if let Some((index, _)) = remaining.char_indices().nth(len) {
+                let (l, r) = remaining.split_at(index);
+                remaining = r;
+                Some(l)
+            } else {
+                Some(remaining)
             }
         })
     }
@@ -205,16 +209,12 @@ impl<V> StringSegmentation<V> for StringBmm<V> {
     where
         V: 'a,
     {
-        let segs = self
-            .bmm
-            .segmentation(sentence.chars().rev())
-            .collect::<Vec<_>>();
+        let segs: Vec<_> = self.bmm.segmentation(sentence.chars().rev()).collect();
         segs.into_iter().rev()
     }
 }
 
 /// Bidirectional maximum matching for string.
-#[derive(Default)]
 pub struct StringBimm<V> {
     fmm: Fmm<char, V>,
     bmm: Fmm<char, V>,
@@ -239,7 +239,7 @@ impl<V: Clone> StringSegmentation<V> for StringBimm<V> {
     {
         fn count_single<V>(segs: &[Segment<char, &V>]) -> usize {
             segs.iter()
-                .filter(|item| match item {
+                .filter(|seg| match seg {
                     Segment::Match(_, (l, r)) => r - l == 1,
                     Segment::Unmatched(_, _) => true,
                 })
