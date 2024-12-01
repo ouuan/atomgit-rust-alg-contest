@@ -62,27 +62,27 @@ struct Time {
 }
 
 impl Time {
-    fn new(years: i32, months: i32) -> Self {
+    const fn new(years: i32, months: i32) -> Self {
         Time {
             months: years * MONTHS_PER_YEAR + months,
         }
     }
 
-    fn from_years(years: i32) -> Self {
+    const fn from_years(years: i32) -> Self {
         Time {
             months: years * MONTHS_PER_YEAR,
         }
     }
 
-    fn from_months(months: i32) -> Self {
+    const fn from_months(months: i32) -> Self {
         Time { months }
     }
 
-    fn zero() -> Self {
+    const fn zero() -> Self {
         Time { months: 0 }
     }
 
-    fn years(&self) -> f32 {
+    const fn years(&self) -> f32 {
         self.months as f32 / MONTHS_PER_YEAR as f32
     }
 }
@@ -105,14 +105,15 @@ impl Add for Time {
 
 impl FromStr for Time {
     type Err = Cow<'static, str>;
+
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut iter = s.split('-');
-        let year = iter
+        let mut parts = s.split('-');
+        let year = parts
             .next()
             .ok_or("invalid format")?
             .parse()
             .map_err(|e| format!("{e}"))?;
-        let month = iter
+        let month = parts
             .next()
             .ok_or("invalid format")?
             .parse()
