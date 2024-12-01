@@ -7,35 +7,37 @@ use std::sync::LazyLock;
 
 static RULE_MAP: LazyLock<HashMap<&'static str, Box<dyn Rule + Send + Sync>>> =
     LazyLock::new(|| {
-        let mut map = HashMap::<_, Box<dyn Rule + Send + Sync>>::new();
-        map.insert(
-            "男职工",
-            Box::new(LinearRule {
-                original: Time::from_years(60),
-                birth_since: Time::new(1965, 1),
-                birth_until: Time::new(1976, 12),
-                rate: 0.25,
-            }),
-        );
-        map.insert(
-            "原法定退休年龄50周岁女职工",
-            Box::new(LinearRule {
-                original: Time::from_years(50),
-                birth_since: Time::new(1975, 1),
-                birth_until: Time::new(1984, 12),
-                rate: 0.5,
-            }),
-        );
-        map.insert(
-            "原法定退休年龄55周岁女职工",
-            Box::new(LinearRule {
-                original: Time::from_years(55),
-                birth_since: Time::new(1970, 1),
-                birth_until: Time::new(1981, 12),
-                rate: 0.25,
-            }),
-        );
-        map
+        [
+            (
+                "男职工",
+                Box::new(LinearRule {
+                    original: Time::from_years(60),
+                    birth_since: Time::new(1965, 1),
+                    birth_until: Time::new(1976, 12),
+                    rate: 0.25,
+                }) as Box<dyn Rule + Send + Sync>,
+            ),
+            (
+                "原法定退休年龄50周岁女职工",
+                Box::new(LinearRule {
+                    original: Time::from_years(50),
+                    birth_since: Time::new(1975, 1),
+                    birth_until: Time::new(1984, 12),
+                    rate: 0.5,
+                }),
+            ),
+            (
+                "原法定退休年龄55周岁女职工",
+                Box::new(LinearRule {
+                    original: Time::from_years(55),
+                    birth_since: Time::new(1970, 1),
+                    birth_until: Time::new(1981, 12),
+                    rate: 0.25,
+                }),
+            ),
+        ]
+        .into_iter()
+        .collect()
     });
 
 pub fn retire_time(time: &str, tp: &str) -> String {
