@@ -1,7 +1,8 @@
 use cipher::consts::{U1, U16, U4};
 use cipher::{
     AlgorithmName, Block, BlockSizeUser, Iv, IvSizeUser, Key, KeyIvInit, KeySizeUser,
-    ParBlocksSizeUser, StreamBackend, StreamCipherCore, StreamCipherCoreWrapper, StreamClosure,
+    ParBlocksSizeUser, StreamCipherBackend, StreamCipherClosure, StreamCipherCore,
+    StreamCipherCoreWrapper,
 };
 
 pub use cipher;
@@ -167,7 +168,7 @@ impl ParBlocksSizeUser for ZucCore {
     type ParBlocksSize = U1;
 }
 
-impl StreamBackend for ZucCore {
+impl StreamCipherBackend for ZucCore {
     fn gen_ks_block(&mut self, block: &mut Block<Self>) {
         self.lfsr_with_work_mode();
         let x = self.bit_reorganization();
@@ -181,7 +182,7 @@ impl StreamCipherCore for ZucCore {
         None
     }
 
-    fn process_with_backend(&mut self, f: impl StreamClosure<BlockSize = Self::BlockSize>) {
+    fn process_with_backend(&mut self, f: impl StreamCipherClosure<BlockSize = Self::BlockSize>) {
         f.call(self);
     }
 }
@@ -207,7 +208,7 @@ mod tests {
             for o in &self.output {
                 core.gen_ks_block(&mut block);
                 if let Some(o) = o {
-                    assert_eq!(block, o.to_be_bytes().into());
+                    assert_eq!(block, o.to_be_bytes());
                 }
             }
         }
