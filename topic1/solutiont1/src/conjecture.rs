@@ -1,38 +1,40 @@
-use prime::prime_sieve;
-
 pub fn goldbach_conjecture() -> u64 {
     let mut cases = Vec::new();
 
-    let mut l = 2;
+    // only handle odd numbers
+    let mut primes = Vec::new();
+    let mut is_prime_odd = vec![false];
 
-    // Solve by binary lifting.
-    // Time complexity: O(n * sqrt(n)), where n is the second target number.
-    while cases.len() < 2 {
-        let r = l * 2;
-        cases.extend(solve(l, r));
-        l = r;
-    }
-
-    (cases[0] + cases[1]) as u64
-}
-
-/// Find all numbers in [l, r) that cannot be expressed as the sum of a prime and twice a square.
-/// Time complexity: O(r + (r-l) * sqrt(r))
-fn solve(l: u32, r: u32) -> impl Iterator<Item = u32> {
-    let (is_prime, _) = prime_sieve(r);
-    (l..r).filter(move |&i| {
-        if i % 2 == 0 {
-            return false;
-        }
-        for j in 0.. {
-            let x = 2 * j * j;
-            if x >= i {
+    for i in (3..).step_by(2) {
+        let mut is_prime = true;
+        for &p in &primes {
+            if i % p == 0 {
+                is_prime = false;
                 break;
             }
-            if is_prime[(i - x) as usize] {
-                return false;
+            if i / p < p {
+                break;
             }
         }
-        true
-    })
+        is_prime_odd.push(is_prime);
+        if is_prime {
+            primes.push(i);
+            continue;
+        }
+        for j in 1.. {
+            let x = 2 * j * j;
+            if x >= i {
+                cases.push(i);
+                break;
+            }
+            if is_prime_odd[(i - x) as usize / 2] {
+                break;
+            }
+        }
+        if cases.len() == 2 {
+            return cases.iter().sum();
+        }
+    }
+
+    unreachable!()
 }

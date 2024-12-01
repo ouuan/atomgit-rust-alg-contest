@@ -3,9 +3,6 @@ name = "solutiont1"
 version = "0.1.0"
 edition = "2021"
 
-[dependencies]
-prime = { version = "0.1.0", path = "../../crates/prime" }
-
 [[test]]
 name = "tests"
 path = "src/tests.rs"
