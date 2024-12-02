@@ -16,13 +16,13 @@ static DIVISION_MAP: LazyLock<HashMap<u32, &str>> = LazyLock::new(|| {
     map
 });
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum IdType {
     V1,
     V2,
 }
 
-#[derive(Clone, Copy, PartialEq, Eq)]
+#[derive(Clone, Copy, PartialEq, Eq, Debug)]
 pub enum Gender {
     Male,
     Female,
@@ -37,6 +37,7 @@ impl fmt::Display for Gender {
     }
 }
 
+#[derive(Debug)]
 pub struct ResidentId {
     id_type: IdType,
     province: &'static str,
@@ -77,7 +78,7 @@ impl ResidentId {
     }
 }
 
-#[derive(Debug)]
+#[derive(Debug, PartialEq, Eq)]
 pub enum IdError {
     InvalidLength,
     InvalidCharacter,
@@ -118,10 +119,13 @@ impl FromStr for ResidentId {
     fn from_str(s: &str) -> Result<Self, Self::Err> {
         let (id_type, birth_year, birth_month, birth_day, serial) = match s.len() {
             15 => {
-                let partial_year = s[6..8].parse::<u32>().or(Err(IdError::InvalidCharacter))?;
-                let birth_month = s[8..10].parse().or(Err(IdError::InvalidCharacter))?;
-                let birth_day = s[10..12].parse().or(Err(IdError::InvalidCharacter))?;
-                let serial = s[12..15].parse().or(Err(IdError::InvalidCharacter))?;
+                if !s.chars().all(|c| c.is_ascii_digit()) {
+                    return Err(IdError::InvalidCharacter);
+                }
+                let partial_year = s[6..8].parse::<u32>().unwrap();
+                let birth_month = s[8..10].parse().unwrap();
+                let birth_day = s[10..12].parse().unwrap();
+                let serial = s[12..15].parse().unwrap();
                 let birth_year = if serial >= 996 {
                     partial_year + 1800
                 } else {
@@ -245,5 +249,19 @@ mod tests {
         assert_eq!(id.birthday().year(), 1890);
         let id: ResidentId = "110101000101995".parse().unwrap();
         assert_eq!(id.birthday().year(), 1900);
+    }
+
+    #[test]
+    fn test_error() {
+        let err: IdError = "110101199001010040".parse::<ResidentId>().unwrap_err();
+        assert_eq!(err, IdError::ChecksumMismatch);
+        let err: IdError = "1101011990010100410".parse::<ResidentId>().unwrap_err();
+        assert_eq!(err, IdError::InvalidLength);
+        let err: IdError = "123测试一下".parse::<ResidentId>().unwrap_err();
+        assert_eq!(err, IdError::InvalidCharacter);
+        let err: IdError = "110101000229001".parse::<ResidentId>().unwrap_err();
+        assert_eq!(err, IdError::InvalidDate);
+        let err: IdError = "114514010101001".parse::<ResidentId>().unwrap_err();
+        assert_eq!(err, IdError::AreaNotFound);
     }
 }
