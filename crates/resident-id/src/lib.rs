@@ -7,13 +7,13 @@ use std::sync::LazyLock;
 const DIVISION_DATA: &str = include_str!("../data/administrative-divisions.txt");
 
 static DIVISION_MAP: LazyLock<HashMap<u32, &str>> = LazyLock::new(|| {
-    let mut map = HashMap::new();
-    for line in DIVISION_DATA.lines() {
-        let (code, name) = line.split_at(6);
-        let code = code.parse().unwrap();
-        map.insert(code, name);
-    }
-    map
+    DIVISION_DATA
+        .lines()
+        .map(|line| {
+            let (code, name) = line.split_at(6);
+            (code.parse().unwrap(), name)
+        })
+        .collect()
 });
 
 #[derive(Clone, Copy, PartialEq, Eq, Debug)]
@@ -92,8 +92,8 @@ fn validate_checksum(s: &str) -> Result<(), IdError> {
     const WEIGHTS: [u32; 17] = [7, 9, 10, 5, 8, 4, 2, 1, 6, 3, 7, 9, 10, 5, 8, 4, 2];
     let mut chars = s.chars();
     let sum = (&mut chars)
-        .zip(WEIGHTS.iter())
         .take(WEIGHTS.len()) // don't consume the last character
+        .zip(WEIGHTS)
         .map(|(c, w)| {
             c.to_digit(10)
                 .ok_or(IdError::InvalidCharacter)
@@ -144,35 +144,28 @@ impl FromStr for ResidentId {
             }
             _ => return Err(IdError::InvalidLength),
         };
-        let code = s[0..6].parse().or(Err(IdError::InvalidCharacter))?;
+        let code = s[0..6].parse().map_err(|_| IdError::InvalidCharacter)?;
         let province = DIVISION_MAP
             .get(&(code - code % 10000))
             .ok_or(IdError::AreaNotFound)?;
-        let city = DIVISION_MAP
-            .get(&(code - code % 100))
-            .copied()
-            .or(match code / 100 % 100 {
-                1 => Some("市辖区"),
-                2 => Some("县"),
-                90 => {
-                    if province.ends_with("省") {
-                        Some("省直辖县级行政区划")
-                    } else if province.ends_with("自治区") {
-                        Some("自治区直辖县级行政区划")
-                    } else {
-                        None
-                    }
-                }
-                _ => None,
-            })
-            .ok_or(IdError::AreaNotFound)?;
+        let city = if let Some(city) = DIVISION_MAP.get(&(code - code % 100)) {
+            city
+        } else {
+            match code / 100 % 100 {
+                1 => "市辖区",
+                2 => "县",
+                90 if province.ends_with("省") => "省直辖县级行政区划",
+                90 if province.ends_with("自治区") => "自治区直辖县级行政区划",
+                _ => return Err(IdError::AreaNotFound),
+            }
+        };
         let area = DIVISION_MAP.get(&code).ok_or(IdError::AreaNotFound)?;
         let birthday =
-            Date::try_new(birth_year, birth_month, birth_day).or(Err(IdError::InvalidDate))?;
-        let gender = match serial % 2 {
-            0 => Gender::Female,
-            1 => Gender::Male,
-            _ => unreachable!(),
+            Date::try_new(birth_year, birth_month, birth_day).map_err(|_| IdError::InvalidDate)?;
+        let gender = if serial % 2 == 0 {
+            Gender::Female
+        } else {
+            Gender::Male
         };
         Ok(Self {
             id_type,
