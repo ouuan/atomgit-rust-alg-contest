@@ -109,17 +109,9 @@ impl FromStr for Time {
     type Err = Cow<'static, str>;
 
     fn from_str(s: &str) -> Result<Self, Self::Err> {
-        let mut parts = s.split('-');
-        let year = parts
-            .next()
-            .ok_or("invalid format")?
-            .parse()
-            .map_err(|e| format!("{e}"))?;
-        let month = parts
-            .next()
-            .ok_or("invalid format")?
-            .parse()
-            .map_err(|e| format!("{e}"))?;
+        let (year, month) = s.split_once('-').ok_or("invalid format")?;
+        let year = year.parse().map_err(|e| format!("{e}"))?;
+        let month = month.parse().map_err(|e| format!("{e}"))?;
         Ok(Time::new(year, month))
     }
 }

@@ -18,9 +18,7 @@ static WADE_MAP: LazyLock<HashMap<&str, &str>> = LazyLock::new(|| {
 static PINYIN_CONVERTER: LazyLock<Converter<&str>> = LazyLock::new(|| {
     let mut converter = Converter::new();
     for line in DICT_STR.lines() {
-        let mut parts = line.split(':');
-        let phrase = parts.next().unwrap();
-        let pinyin = parts.next().unwrap();
+        let (phrase, pinyin) = line.split_once(':').unwrap();
         converter.add_phrase(phrase, pinyin);
     }
     converter

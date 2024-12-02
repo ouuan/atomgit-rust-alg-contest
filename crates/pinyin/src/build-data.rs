@@ -70,9 +70,7 @@ fn parse_character_rule(line: &str) -> Option<(String, String)> {
 fn parse_phrase_rule(line: &str) -> Option<(String, String)> {
     let mut parts = line.split('#');
     let not_comment = parts.next()?;
-    let mut parts = not_comment.split(':');
-    let phrase = parts.next()?;
-    let pinyin = parts.next()?;
+    let (phrase, pinyin) = not_comment.split_once(':')?;
     let pinyin = remove_tone(pinyin);
     Some((phrase.into(), pinyin))
 }
