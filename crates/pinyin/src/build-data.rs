@@ -3,6 +3,9 @@ use std::collections::{HashMap, HashSet};
 use std::fs::File;
 use std::io::{BufWriter, Write};
 
+mod constants;
+use constants::WADE_LIST;
+
 const CHARACTER_DICT: &str = include_str!("../pinyin-data/pinyin.txt");
 const PHRASE_DICT: &str = include_str!("../phrase-pinyin-data/large_pinyin.txt");
 
@@ -81,12 +84,20 @@ fn main() {
         .filter_map(parse_character_rule)
         .chain(PHRASE_DICT.lines().filter_map(parse_phrase_rule));
 
+    let mut wade_set = WADE_LIST
+        .iter()
+        .map(|(a, _)| a.to_string())
+        .collect::<HashSet<_>>();
+
     let mut map = HashMap::new();
     let mut homophone = HashSet::new();
 
     for (phrase, pinyin) in rules.clone() {
         assert_eq!(phrase.chars().count(), pinyin.split_whitespace().count());
         for (c, p) in phrase.chars().zip(pinyin.split_whitespace()) {
+            if wade_set.insert(p.to_string()) {
+                eprintln!("{p} (in {phrase}) not found in wade gile list");
+            }
             match map.entry(c) {
                 Entry::Vacant(entry) => {
                     entry.insert(p.to_string());
