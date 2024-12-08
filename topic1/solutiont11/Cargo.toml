@@ -4,3 +4,4 @@ version = "0.1.0"
 edition = "2021"
 
 [dependencies]
+baby-mimalloc = { version = "0.1.0", path = "../../crates/baby-mimalloc", features = ["mmap", "std_mutex"] }
