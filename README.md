@@ -1,5 +1,7 @@
 # Rust Contest
 
+[Rust数据结构与算法学习赛 - 开放原子大赛 - 训练营](https://opencamp.cn/atomgit/camp/rust)
+
 ## 代码结构
 
 可复用的代码作为独立的 crate 放在 [`crates`](./crates) 中，在题目代码中引用。
