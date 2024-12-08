@@ -1,0 +1,21 @@
+[package]
+name = "baby-mimalloc"
+version = "0.1.0"
+edition = "2021"
+
+[dependencies]
+libc = { version = "0.2.167", default-features = false, optional = true }
+spin = { version = "0.9.8", default-features = false, features = ["spin_mutex"], optional = true }
+
+[dev-dependencies]
+rand = "0.8.5"
+
+[features]
+std = []
+mmap = ["dep:libc"]
+std_mutex = ["std"]
+spin_mutex = ["dep:spin"]
+
+[[test]]
+name = "global_alloc"
+required-features = ["mmap", "spin_mutex"]
