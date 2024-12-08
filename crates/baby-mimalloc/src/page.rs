@@ -2,9 +2,9 @@
 
 use crate::constants::*;
 use crate::heap::Heap;
-use crate::list::{impl_list_item, LinkedList};
+use crate::list::impl_list_item;
 use crate::segment::Segment;
-use crate::utils::{bin_for_size, dup_mut};
+use crate::utils::bin_for_size;
 use core::alloc::GlobalAlloc;
 use core::ptr::{null_mut, NonNull};
 
@@ -29,6 +29,7 @@ pub struct Page {
     used: u16,
     local_free: *mut Block,
     block_size: usize,
+    bin: u8,
     next: *mut Self,
     prev: *mut Self,
 }
@@ -112,8 +113,7 @@ impl Page {
             if self.all_free() {
                 self.maybe_retire(heap, os_alloc);
             } else if unsafe { self.flags.flags }.full {
-                let pq = unsafe { dup_mut(heap.page_queue_of_page(self)) };
-                heap.page_queue_push_back(pq, self);
+                heap.page_queue_push_back(self);
                 self.flags.flags.full = false;
             }
         }
@@ -129,6 +129,7 @@ impl Page {
     pub fn init(&mut self, page_size: usize, block_size: usize) {
         debug_assert_eq!(self.reserved, 0, "block double inited");
         self.block_size = block_size;
+        self.bin = bin_for_size(block_size) as u8;
         self.reserved = (page_size / block_size) as _;
         self.extend();
     }
@@ -163,18 +164,12 @@ impl Page {
             return;
         }
 
-        let pq = unsafe { dup_mut(heap.page_queue_of_page(self)) };
-        self.retire(heap, pq, os_alloc);
+        self.retire(heap, os_alloc);
     }
 
     // _mi_page_free
-    pub fn retire<A: GlobalAlloc>(
-        &mut self,
-        heap: &mut Heap,
-        pq: &mut LinkedList<Self>,
-        os_alloc: &A,
-    ) {
-        heap.page_queue_remove(pq, self);
+    pub fn retire<A: GlobalAlloc>(&mut self, heap: &mut Heap, os_alloc: &A) {
+        heap.page_queue_remove(self);
         let segment = unsafe { Segment::of_ptr(self).as_mut().unwrap_unchecked() };
         segment.free_page(heap, self, os_alloc);
     }
@@ -210,6 +205,10 @@ impl Page {
 
     pub const fn block_size(&self) -> usize {
         self.block_size
+    }
+
+    pub const fn bin(&self) -> usize {
+        self.bin as _
     }
 
     pub fn set_full(&mut self, full: bool) {
@@ -250,6 +249,7 @@ mod empty_page {
         used: 0,
         local_free: null_mut(),
         block_size: 0,
+        bin: 0,
         next: null_mut(),
         prev: null_mut(),
     });

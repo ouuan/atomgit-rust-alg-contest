@@ -3,7 +3,7 @@ use crate::list::{LinkedList, LinkedListItem};
 use crate::page::{empty_page, Page};
 use crate::segment::{PageKind, Segment};
 use crate::utils::{
-    bin_for_size, dup_mut, wsize_from_size, BLOCK_SIZE_FOR_BIN, WSIZE_RANGE_IN_SAME_SMALL_BIN,
+    bin_for_size, wsize_from_size, BLOCK_SIZE_FOR_BIN, WSIZE_RANGE_IN_SAME_SMALL_BIN,
 };
 use core::alloc::GlobalAlloc;
 use core::ptr::{null_mut, NonNull};
@@ -139,7 +139,7 @@ impl Heap {
 
     fn find_free_page<A: GlobalAlloc>(&mut self, size: usize, os_alloc: &A) -> *mut Page {
         let bin = bin_for_size(size);
-        let pq = unsafe { dup_mut(&mut self.pages[bin]) };
+        let pq = &mut self.pages[bin];
 
         if let Some(page) = unsafe { pq.first().as_mut() } {
             page.free_collect();
@@ -163,7 +163,7 @@ impl Heap {
                 if page_free_count < 8 && page.all_free() {
                     page_free_count += 1;
                     if let Some(rpage) = unsafe { page_to_retire.as_mut() } {
-                        rpage.retire(self, pq, os_alloc);
+                        rpage.retire(self, os_alloc);
                     }
                     page_to_retire = p;
                     p = next;
@@ -179,7 +179,7 @@ impl Heap {
             }
 
             page.set_full(true);
-            self.page_queue_remove(pq, page);
+            self.page_queue_remove(page);
 
             p = next;
         }
@@ -190,31 +190,26 @@ impl Heap {
         }
 
         if let Some(rpage) = unsafe { page_to_retire.as_mut() } {
-            rpage.retire(self, pq, os_alloc);
+            rpage.retire(self, os_alloc);
         }
 
         if p.is_null() {
             let block_size = BLOCK_SIZE_FOR_BIN[bin];
-            self.alloc_page(pq, block_size, os_alloc)
+            self.alloc_page(block_size, os_alloc)
         } else {
             debug_assert!(unsafe { (*p).immediate_available() });
             p
         }
     }
 
-    fn alloc_page<A: GlobalAlloc>(
-        &mut self,
-        pq: &mut LinkedList<Page>,
-        block_size: usize,
-        os_alloc: &A,
-    ) -> *mut Page {
+    fn alloc_page<A: GlobalAlloc>(&mut self, block_size: usize, os_alloc: &A) -> *mut Page {
         match self.segment_page_alloc(block_size, os_alloc) {
             None => null_mut(),
             Some((segment, mut p)) => {
                 let page_size = unsafe { segment.as_ref() }.page_size(p.as_ptr());
                 let page = unsafe { p.as_mut() };
                 page.init(page_size, block_size);
-                self.page_queue_push_front(pq, page);
+                self.page_queue_push_front(page);
                 p.as_ptr()
             }
         }
@@ -222,30 +217,28 @@ impl Heap {
 
     fn alloc_huge_page<A: GlobalAlloc>(&mut self, size: usize, os_alloc: &A) -> *mut Page {
         let block_size = size.next_multiple_of(MI_INTPTR_SIZE);
-        let pq = unsafe { dup_mut(&mut self.pages[MI_BIN_HUGE]) };
-        self.alloc_page(pq, block_size, os_alloc)
+        self.alloc_page(block_size, os_alloc)
     }
 
-    pub fn page_queue_of_page(&mut self, page: &Page) -> &mut LinkedList<Page> {
-        let bin = bin_for_size(page.block_size());
-        &mut self.pages[bin]
-    }
-
-    pub fn page_queue_push_front(&mut self, pq: &mut LinkedList<Page>, page: &mut Page) {
+    pub fn page_queue_push_front(&mut self, page: &mut Page) {
+        let pq = &mut self.pages[page.bin()];
         pq.push_front(page);
         self.page_queue_first_update(page.block_size(), page);
     }
 
-    pub fn page_queue_push_back(&mut self, pq: &mut LinkedList<Page>, page: &mut Page) {
+    pub fn page_queue_push_back(&mut self, page: &mut Page) {
+        let pq = &mut self.pages[page.bin()];
         if pq.push_back(page) {
             self.page_queue_first_update(page.block_size(), page);
         }
     }
 
-    pub fn page_queue_remove(&mut self, pq: &mut LinkedList<Page>, page: &mut Page) {
+    pub fn page_queue_remove(&mut self, page: &mut Page) {
+        let pq = &mut self.pages[page.bin()];
         debug_assert!(pq.contains(page));
         if pq.remove(page) {
-            self.page_queue_first_update(page.block_size(), pq.first());
+            let first = pq.first();
+            self.page_queue_first_update(page.block_size(), first);
         }
     }
 

@@ -66,8 +66,3 @@ pub const WSIZE_RANGE_IN_SAME_SMALL_BIN: [(u8, u8); MI_SMALL_WSIZE_MAX + 1] =
     wsize_range_in_same_small_bin();
 
 pub const BLOCK_SIZE_FOR_BIN: [usize; MI_BIN_HUGE] = block_size_for_bin();
-
-/// Mutably borrow twice.
-pub unsafe fn dup_mut<'a, T>(p: *mut T) -> &'a mut T {
-    p.as_mut().unwrap_unchecked()
-}
