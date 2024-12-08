@@ -31,19 +31,19 @@ use heap::Heap;
 
 /// The main allocator object.
 ///
-/// `A` is the type of the OS allocator for segments. It should implement [`GlobalAlloc`].
+/// `A` is the type of the OS allocator for segments.
 ///
 /// To use it as the [`global_allocator`], wrap it inside a lock and implement [`GlobalAlloc`].
 /// See [`MimallocMutexWrapper`].
 #[derive(Default)]
-pub struct Mimalloc<A> {
+pub struct Mimalloc<A: GlobalAlloc> {
     heap: Heap,
     os_alloc: A,
 }
 
-unsafe impl<A> Send for Mimalloc<A> {}
+unsafe impl<A: GlobalAlloc> Send for Mimalloc<A> {}
 
-impl<A> Mimalloc<A> {
+impl<A: GlobalAlloc> Mimalloc<A> {
     /// Create a new [`Mimalloc`] instance with an OS allocator.
     pub const fn with_os_allocator(os_alloc: A) -> Self {
         Self {
@@ -61,9 +61,12 @@ impl<A> Mimalloc<A> {
     pub fn register_deferred_free(&mut self, hook: fn(force: bool, heartbeat: u64)) {
         self.heap.register_deferred_free(hook)
     }
-}
 
-impl<A: GlobalAlloc> Mimalloc<A> {
+    /// Collect free memory.
+    pub fn collect(&mut self) {
+        self.heap.collect(&self.os_alloc);
+    }
+
     /// [`GlobalAlloc::alloc`] but requires a mutable reference `&mut self`.
     ///
     /// # Safety
@@ -81,6 +84,12 @@ impl<A: GlobalAlloc> Mimalloc<A> {
     /// See [`GlobalAlloc::dealloc`].
     pub unsafe fn dealloc(&mut self, ptr: *mut u8, _: Layout) {
         self.heap.free(ptr, &self.os_alloc)
+    }
+}
+
+impl<A: GlobalAlloc> Drop for Mimalloc<A> {
+    fn drop(&mut self) {
+        self.collect();
     }
 }
 

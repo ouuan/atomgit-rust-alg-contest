@@ -303,4 +303,18 @@ impl Heap {
         let segment = unsafe { NonNull::new_unchecked(Segment::of_ptr(page.as_ptr())) };
         Segment::remove_a_page(segment, self, os_alloc);
     }
+
+    pub fn collect<A: GlobalAlloc>(&mut self, os_alloc: &A) {
+        for i in 0..self.pages.len() {
+            let mut p = self.pages[i].first();
+            while let Some(mut page) = NonNull::new(p) {
+                let page_mut = unsafe { page.as_mut() };
+                page_mut.free_collect();
+                p = page_mut.next();
+                if page_mut.all_free() {
+                    self.retire_page(page, os_alloc);
+                }
+            }
+        }
+    }
 }

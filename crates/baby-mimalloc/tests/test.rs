@@ -128,8 +128,12 @@ fn random_alloc_dealloc_small() {
     let mut count = [0; K];
     let mut ptrs = [const { Vec::new() }; K];
 
-    for _ in 0..T {
-        let new_count = from_fn(|_| rng.gen_range(0..N));
+    for t in 0..=T {
+        let new_count = if t == T {
+            [0; K]
+        } else {
+            from_fn(|_| rng.gen_range(0..N))
+        };
         for (i, (old, new)) in count.into_iter().zip(new_count).enumerate() {
             let size = (i + 1) * 8;
             if new > old {
@@ -140,6 +144,49 @@ fn random_alloc_dealloc_small() {
                     .for_each(|(ptr, layout)| unsafe { allocator.dealloc(ptr, layout) });
             }
             ptrs[i].shuffle(&mut rng);
+        }
+        count = new_count;
+    }
+
+    let peak = os_alloc.0.lock().unwrap().peak;
+    let threshold = const { (N * 5 * K * (K + 1)).next_multiple_of(4 * 1024 * 1024) };
+    assert!(peak <= threshold, "peak: {peak} > {threshold}");
+    assert!(peak >= threshold / 2, "peak: {peak} < {threshold} / 2");
+}
+
+#[test]
+fn random_alloc_dealloc_small_collect() {
+    let mut rng = thread_rng();
+    let os_alloc = SystemWithStat::default();
+    let mut allocator = Mimalloc::with_os_allocator(os_alloc.clone());
+
+    const N: usize = 1_000_000;
+    const K: usize = 3;
+    const T: usize = 20;
+
+    let mut count = [0; K];
+    let mut ptrs = [const { Vec::new() }; K];
+
+    for t in 0..=T {
+        let new_count = if t == T {
+            [0; K]
+        } else {
+            from_fn(|_| {
+                let bound = if rng.gen() { N } else { 2 };
+                rng.gen_range(0..bound)
+            })
+        };
+        for (i, (old, new)) in count.into_iter().zip(new_count).enumerate() {
+            let size = (i + 1) * 8;
+            if new > old {
+                ptrs[i].extend((old..new).map(|_| test_alloc(&mut allocator, size, 1)));
+            } else {
+                ptrs[i]
+                    .splice(new.., [])
+                    .for_each(|(ptr, layout)| unsafe { allocator.dealloc(ptr, layout) });
+            }
+            ptrs[i].shuffle(&mut rng);
+            allocator.collect();
         }
         count = new_count;
     }
@@ -164,8 +211,12 @@ fn random_alloc_dealloc_large() {
     let mut count = [0; K];
     let mut allocation = [const { Vec::new() }; K];
 
-    for _ in 0..T {
-        let new_count = from_fn(|_| rng.gen_range(0..N));
+    for t in 0..=T {
+        let new_count = if t == T {
+            [0; K]
+        } else {
+            from_fn(|_| rng.gen_range(0..N))
+        };
         for (i, (old, new)) in count.into_iter().zip(new_count).enumerate() {
             let align = 1 << i;
             if new > old {

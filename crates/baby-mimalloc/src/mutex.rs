@@ -8,12 +8,22 @@ use std::sync::{Mutex, MutexGuard};
 
 /// Wrap [`Mimalloc`] inside a [`Mutex`] and implement [`GlobalAlloc`].
 #[derive(Default)]
-pub struct MimallocMutexWrapper<A>(Mutex<Mimalloc<A>>);
+pub struct MimallocMutexWrapper<A: GlobalAlloc>(Mutex<Mimalloc<A>>);
 
-impl<A> MimallocMutexWrapper<A> {
+impl<A: GlobalAlloc> MimallocMutexWrapper<A> {
     /// See [`Mimalloc::with_os_allocator`].
     pub const fn with_os_allocator(os_alloc: A) -> Self {
         Self(Mutex::new(Mimalloc::with_os_allocator(os_alloc)))
+    }
+
+    /// See [`Mimalloc::register_deferred_free`].
+    pub fn register_deferred_free(&self, hook: fn(force: bool, heartbeat: u64)) {
+        self.allocator().register_deferred_free(hook);
+    }
+
+    /// See [`Mimalloc::collect`].
+    pub fn collect(&self) {
+        self.allocator().collect();
     }
 
     fn allocator(&self) -> MutexGuard<Mimalloc<A>> {
