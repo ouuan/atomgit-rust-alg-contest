@@ -175,8 +175,9 @@ impl Page {
     // _mi_page_free
     pub fn retire<A: GlobalAlloc>(&mut self, heap: &mut Heap, os_alloc: &A) {
         heap.page_queue_remove(self);
-        let segment = unsafe { Segment::of_ptr(self).as_mut().unwrap_unchecked() };
-        segment.free_page(heap, self, os_alloc);
+        let segment = unsafe { NonNull::new_unchecked(Segment::of_ptr(self)) };
+        unsafe { NonNull::from(self).write_bytes(0, 1) };
+        Segment::remove_a_page(segment, heap, os_alloc);
     }
 
     pub fn extend(&mut self) {

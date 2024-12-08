@@ -153,18 +153,22 @@ impl Segment {
         }
     }
 
-    pub fn free_page<A: GlobalAlloc>(&mut self, heap: &mut Heap, page: &mut Page, os_alloc: &A) {
-        unsafe { (page as *mut Page).write_bytes(0, 1) };
-        self.used -= 1;
+    pub fn remove_a_page<A: GlobalAlloc>(
+        mut segment: NonNull<Self>,
+        heap: &mut Heap,
+        os_alloc: &A,
+    ) {
+        let seg = unsafe { segment.as_mut() };
+        seg.used -= 1;
 
-        if self.used == 0 {
-            heap.remove_small_free_segment(self);
+        if seg.used == 0 {
+            heap.remove_small_free_segment(seg);
             unsafe {
-                let layout = Layout::from_size_align_unchecked(self.segment_size, MI_SEGMENT_SIZE);
-                os_alloc.dealloc(self as *mut _ as _, layout);
+                let layout = Layout::from_size_align_unchecked(seg.segment_size, MI_SEGMENT_SIZE);
+                os_alloc.dealloc(segment.as_ptr().cast(), layout);
             }
-        } else if self.used + 1 == self.capacity {
-            heap.push_small_free_segment(self);
+        } else if seg.used + 1 == seg.capacity {
+            heap.push_small_free_segment(seg);
         }
     }
 }
