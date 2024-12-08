@@ -94,32 +94,36 @@ impl Page {
     }
 
     pub fn free_block<A: GlobalAlloc>(
-        &mut self,
         heap: &mut Heap,
+        mut page: NonNull<Page>,
         segment: NonNull<Segment>,
         p: *mut u8,
         os_alloc: &A,
     ) {
-        if unsafe { self.flags.flag_16 } == 0 {
+        let page_mut = unsafe { page.as_mut() };
+        if unsafe { page_mut.flags.flag_16 } == 0 {
             // fast path
-            self.free_block_core(p.cast());
-            if self.all_free() {
-                self.maybe_retire(heap, os_alloc);
+            page_mut.free_block_core(p.cast());
+            if page_mut.all_free() && page_mut.should_retire() {
+                heap.retire_page(page, os_alloc);
             }
         } else {
             // generic path
-            let block = if unsafe { self.flags.flags }.has_aligned {
-                let offset = p as usize - unsafe { segment.as_ref() }.page_payload_addr(self);
-                (p as usize - offset % self.block_size()) as *mut Block
+            let block = if unsafe { page_mut.flags.flags }.has_aligned {
+                let offset =
+                    p as usize - unsafe { segment.as_ref() }.page_payload_addr(page.as_ptr());
+                (p as usize - offset % page_mut.block_size()) as *mut Block
             } else {
                 p.cast()
             };
-            self.free_block_core(block);
-            if self.all_free() {
-                self.maybe_retire(heap, os_alloc);
-            } else if unsafe { self.flags.flags }.full {
-                heap.page_queue_push_back(self);
-                self.flags.flags.full = false;
+            page_mut.free_block_core(block);
+            if page_mut.all_free() {
+                if page_mut.should_retire() {
+                    heap.retire_page(page, os_alloc);
+                }
+            } else if unsafe { page_mut.flags.flags }.full {
+                page_mut.flags.flags.full = false;
+                heap.page_queue_push_back(page);
             }
         }
     }
@@ -155,7 +159,7 @@ impl Page {
     }
 
     // _mi_page_retire
-    pub fn maybe_retire<A: GlobalAlloc>(&mut self, heap: &mut Heap, os_alloc: &A) {
+    fn should_retire(&mut self) -> bool {
         fn mostly_used(p: *mut Page) -> bool {
             if let Some(page) = unsafe { p.as_mut() } {
                 page.reserved - page.used < page.reserved / 8
@@ -166,18 +170,10 @@ impl Page {
 
         if self.block_size < MI_LARGE_SIZE_MAX && mostly_used(self.prev) && mostly_used(self.next) {
             self.flags.flag_16 = 0;
-            return;
+            false
+        } else {
+            true
         }
-
-        self.retire(heap, os_alloc);
-    }
-
-    // _mi_page_free
-    pub fn retire<A: GlobalAlloc>(&mut self, heap: &mut Heap, os_alloc: &A) {
-        heap.page_queue_remove(self);
-        let segment = unsafe { NonNull::new_unchecked(Segment::of_ptr(self)) };
-        unsafe { NonNull::from(self).write_bytes(0, 1) };
-        Segment::remove_a_page(segment, heap, os_alloc);
     }
 
     pub fn extend(&mut self) {

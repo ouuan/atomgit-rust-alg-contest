@@ -134,11 +134,11 @@ impl Segment {
         (ptr as usize & !MI_SEGMENT_MASK) as _
     }
 
-    pub fn page_of_ptr<'a>(&self, ptr: *const u8) -> &'a mut Page {
+    pub fn page_of_ptr(&self, ptr: *const u8) -> NonNull<Page> {
         let offset = ptr as usize - self as *const _ as usize;
         let index = offset / self.page_size;
-        let p = (Self::pages_base_addr(self) + index * size_of::<Page>()) as *mut Page;
-        unsafe { p.as_mut().unwrap_unchecked() }
+        let p = (Self::pages_base_addr(self) + index * size_of::<Page>()) as _;
+        unsafe { NonNull::new_unchecked(p) }
     }
 
     fn pages_base_addr(self_ptr: *const Self) -> usize {

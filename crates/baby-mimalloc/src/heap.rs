@@ -96,7 +96,7 @@ impl Heap {
             return;
         };
         let page = segment.page_of_ptr(p);
-        page.free_block(self, segment.into(), p, os_alloc);
+        Page::free_block(self, page, segment.into(), p, os_alloc);
     }
 
     fn get_small_free_page(&mut self, size: usize) -> NonNull<Page> {
@@ -162,8 +162,8 @@ impl Heap {
             if page.immediate_available() {
                 if page_free_count < 8 && page.all_free() {
                     page_free_count += 1;
-                    if let Some(rpage) = unsafe { page_to_retire.as_mut() } {
-                        rpage.retire(self, os_alloc);
+                    if let Some(rpage) = NonNull::new(page_to_retire) {
+                        self.retire_page(rpage, os_alloc);
                     }
                     page_to_retire = p;
                     p = next;
@@ -189,8 +189,8 @@ impl Heap {
             page_to_retire = null_mut();
         }
 
-        if let Some(rpage) = unsafe { page_to_retire.as_mut() } {
-            rpage.retire(self, os_alloc);
+        if let Some(rpage) = NonNull::new(page_to_retire) {
+            self.retire_page(rpage, os_alloc);
         }
 
         if p.is_null() {
@@ -220,20 +220,20 @@ impl Heap {
         self.alloc_page(block_size, os_alloc)
     }
 
-    pub fn page_queue_push_front(&mut self, page: &mut Page) {
+    fn page_queue_push_front(&mut self, page: &mut Page) {
         let pq = &mut self.pages[page.bin()];
         unsafe { pq.push_front(page.into()) };
         self.page_queue_first_update(page.block_size(), page);
     }
 
-    pub fn page_queue_push_back(&mut self, page: &mut Page) {
-        let pq = &mut self.pages[page.bin()];
-        if unsafe { pq.push_back(page.into()) } {
-            self.page_queue_first_update(page.block_size(), page);
+    pub fn page_queue_push_back(&mut self, page: NonNull<Page>) {
+        let pq = &mut self.pages[unsafe { page.as_ref() }.bin()];
+        if unsafe { pq.push_back(page) } {
+            self.page_queue_first_update(unsafe { page.as_ref() }.block_size(), page.as_ptr());
         }
     }
 
-    pub fn page_queue_remove(&mut self, page: &mut Page) {
+    fn page_queue_remove(&mut self, page: &mut Page) {
         let pq = &mut self.pages[page.bin()];
         debug_assert!(pq.contains(page));
         if unsafe { pq.remove(page.into()) } {
@@ -294,5 +294,13 @@ impl Heap {
         if self.small_free_segments.contains(segment) {
             unsafe { self.small_free_segments.remove(segment.into()) };
         }
+    }
+
+    // _mi_page_free
+    pub fn retire_page<A: GlobalAlloc>(&mut self, mut page: NonNull<Page>, os_alloc: &A) {
+        self.page_queue_remove(unsafe { page.as_mut() });
+        unsafe { page.write_bytes(0, 1) };
+        let segment = unsafe { NonNull::new_unchecked(Segment::of_ptr(page.as_ptr())) };
+        Segment::remove_a_page(segment, self, os_alloc);
     }
 }
