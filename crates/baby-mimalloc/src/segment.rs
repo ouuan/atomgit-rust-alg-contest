@@ -74,9 +74,10 @@ impl Segment {
         let p = unsafe { os_alloc.alloc(layout) as *mut Self };
 
         let segment = NonNull::new(p)?;
+        let pages_base = Self::pages_base_addr(segment.as_ptr()) as *mut Page;
 
         // clear pages
-        unsafe { (segment.as_ref().pages_base_addr() as *mut Page).write_bytes(0, capacity) };
+        unsafe { pages_base.write_bytes(0, capacity) };
 
         let value = Segment {
             next: null_mut(),
@@ -89,8 +90,7 @@ impl Segment {
         };
         unsafe { segment.write(value) };
 
-        let mut page =
-            unsafe { NonNull::<Page>::new_unchecked(segment.as_ref().pages_base_addr() as _) };
+        let mut page = unsafe { NonNull::<Page>::new_unchecked(pages_base) };
         unsafe { page.as_mut() }.set_in_use(true);
 
         Some((segment, page))
@@ -98,7 +98,7 @@ impl Segment {
 
     pub fn find_free_small_page(&self) -> NonNull<Page> {
         debug_assert_eq!(self.capacity, MI_SMALL_PAGES_PER_SEGMENT);
-        let mut addr = self.pages_base_addr();
+        let mut addr = Self::pages_base_addr(self);
         for _ in 0..MI_SMALL_PAGES_PER_SEGMENT {
             let mut p = unsafe { NonNull::<Page>::new_unchecked(addr as _) };
             let page = unsafe { p.as_mut() };
@@ -120,7 +120,7 @@ impl Segment {
     }
 
     pub fn page_payload_addr(&self, page: *const Page) -> usize {
-        let index = (page as usize - self.pages_base_addr()) / size_of::<Page>();
+        let index = (page as usize - Self::pages_base_addr(self)) / size_of::<Page>();
         let base = self as *const _ as usize;
         let offset = if index == 0 {
             self.info_size
@@ -137,12 +137,12 @@ impl Segment {
     pub fn page_of_ptr<'a>(&self, ptr: *const u8) -> &'a mut Page {
         let offset = ptr as usize - self as *const _ as usize;
         let index = offset / self.page_size;
-        let p = (self.pages_base_addr() + index * size_of::<Page>()) as *mut Page;
+        let p = (Self::pages_base_addr(self) + index * size_of::<Page>()) as *mut Page;
         unsafe { p.as_mut().unwrap_unchecked() }
     }
 
-    fn pages_base_addr(&self) -> usize {
-        self as *const _ as usize + size_of::<Self>()
+    fn pages_base_addr(self_ptr: *const Self) -> usize {
+        self_ptr as usize + size_of::<Self>()
     }
 
     pub fn page_size(&self, page: *const Page) -> usize {

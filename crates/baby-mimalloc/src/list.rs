@@ -1,4 +1,4 @@
-use core::ptr::null_mut;
+use core::ptr::{null_mut, NonNull};
 
 pub struct LinkedList<T> {
     first: *mut T,
@@ -30,35 +30,35 @@ impl<T> LinkedList<T> {
 
 impl<T: LinkedListItem> LinkedList<T> {
     /// Push a new element at the beginning of the list.
-    pub fn push_front(&mut self, el: &mut T) {
-        el.set_next(self.first);
-        el.set_prev(null_mut());
+    pub unsafe fn push_front(&mut self, mut el: NonNull<T>) {
+        el.as_mut().set_next(self.first);
+        el.as_mut().set_prev(null_mut());
 
-        if let Some(first) = unsafe { self.first.as_mut() } {
-            first.set_prev(el);
+        if let Some(first) = self.first.as_mut() {
+            first.set_prev(el.as_ptr());
         } else {
-            self.last = el;
+            self.last = el.as_ptr();
         }
 
-        self.first = el;
+        self.first = el.as_ptr();
     }
 
     /// Push a new element at the end of the list.
     ///
     /// Returns whether the first element of the list is updated.
-    pub fn push_back(&mut self, el: &mut T) -> bool {
-        el.set_prev(self.last);
-        el.set_next(null_mut());
+    pub unsafe fn push_back(&mut self, mut el: NonNull<T>) -> bool {
+        el.as_mut().set_prev(self.last);
+        el.as_mut().set_next(null_mut());
 
-        let result = if let Some(last) = unsafe { self.last.as_mut() } {
-            last.set_next(el);
+        let result = if let Some(last) = self.last.as_mut() {
+            last.set_next(el.as_ptr());
             false
         } else {
-            self.first = el;
+            self.first = el.as_ptr();
             true
         };
 
-        self.last = el;
+        self.last = el.as_ptr();
 
         result
     }
@@ -66,22 +66,22 @@ impl<T: LinkedListItem> LinkedList<T> {
     /// Remove an element from the list. The element must be in the list.
     ///
     /// Returns whether the first element of the list is updated.
-    pub fn remove(&mut self, el: &mut T) -> bool {
-        if let Some(prev) = unsafe { el.prev().as_mut() } {
-            prev.set_next(el.next());
+    pub unsafe fn remove(&mut self, mut el: NonNull<T>) -> bool {
+        if let Some(prev) = el.as_ref().prev().as_mut() {
+            prev.set_next(el.as_ref().next());
         }
-        if let Some(next) = unsafe { el.next().as_mut() } {
-            next.set_prev(el.prev());
+        if let Some(next) = el.as_ref().next().as_mut() {
+            next.set_prev(el.as_ref().prev());
         }
-        let first_updated = el as *const _ == self.first;
+        let first_updated = el.as_ptr() == self.first;
         if first_updated {
-            self.first = el.next();
+            self.first = el.as_ref().next();
         }
-        if el as *const _ == self.last {
-            self.last = el.prev();
+        if el.as_ptr() == self.last {
+            self.last = el.as_ref().prev();
         }
-        el.set_prev(null_mut());
-        el.set_next(null_mut());
+        el.as_mut().set_prev(null_mut());
+        el.as_mut().set_next(null_mut());
         first_updated
     }
 

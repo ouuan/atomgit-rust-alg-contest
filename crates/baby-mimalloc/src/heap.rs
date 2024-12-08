@@ -96,7 +96,7 @@ impl Heap {
             return;
         };
         let page = segment.page_of_ptr(p);
-        page.free_block(self, segment, p, os_alloc);
+        page.free_block(self, segment.into(), p, os_alloc);
     }
 
     fn get_small_free_page(&mut self, size: usize) -> NonNull<Page> {
@@ -222,13 +222,13 @@ impl Heap {
 
     pub fn page_queue_push_front(&mut self, page: &mut Page) {
         let pq = &mut self.pages[page.bin()];
-        pq.push_front(page);
+        unsafe { pq.push_front(page.into()) };
         self.page_queue_first_update(page.block_size(), page);
     }
 
     pub fn page_queue_push_back(&mut self, page: &mut Page) {
         let pq = &mut self.pages[page.bin()];
-        if pq.push_back(page) {
+        if unsafe { pq.push_back(page.into()) } {
             self.page_queue_first_update(page.block_size(), page);
         }
     }
@@ -236,7 +236,7 @@ impl Heap {
     pub fn page_queue_remove(&mut self, page: &mut Page) {
         let pq = &mut self.pages[page.bin()];
         debug_assert!(pq.contains(page));
-        if pq.remove(page) {
+        if unsafe { pq.remove(page.into()) } {
             let first = pq.first();
             self.page_queue_first_update(page.block_size(), first);
         }
@@ -263,16 +263,15 @@ impl Heap {
         if block_size < MI_SMALL_PAGE_SIZE / 8 {
             match unsafe { self.small_free_segments.first().as_mut() } {
                 None => {
-                    let (mut segment, page) = Segment::alloc(PageKind::Small, os_alloc)?;
-                    self.small_free_segments
-                        .push_back(unsafe { segment.as_mut() });
+                    let (segment, page) = Segment::alloc(PageKind::Small, os_alloc)?;
+                    unsafe { self.small_free_segments.push_back(segment) };
                     Some((segment, page))
                 }
                 Some(segment) => {
                     let page = segment.find_free_small_page();
                     segment.increment_used();
                     if segment.is_full() {
-                        self.small_free_segments.remove(segment);
+                        unsafe { self.small_free_segments.remove(segment.into()) };
                     }
                     Some((segment.into(), page))
                 }
@@ -288,12 +287,12 @@ impl Heap {
     }
 
     pub fn push_small_free_segment(&mut self, segment: &mut Segment) {
-        self.small_free_segments.push_back(segment);
+        unsafe { self.small_free_segments.push_back(segment.into()) };
     }
 
     pub fn remove_small_free_segment(&mut self, segment: &mut Segment) {
         if self.small_free_segments.contains(segment) {
-            self.small_free_segments.remove(segment);
+            unsafe { self.small_free_segments.remove(segment.into()) };
         }
     }
 }

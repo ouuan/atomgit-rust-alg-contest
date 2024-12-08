@@ -83,7 +83,12 @@ impl Page {
                 let page = unsafe { page.as_mut() };
                 page.free = block.next;
                 page.used += 1;
-                Some((NonNull::from(block).cast(), page))
+                // convert to usize first to avoid UB
+                // > Undefined Behavior: attempting a write access using ... at ...,
+                // > but that tag does not exist in the borrow stack for this location
+                let addr = block as *mut _ as usize;
+                let ptr = unsafe { NonNull::new_unchecked(addr as *mut u8) };
+                Some((ptr, page))
             }
         }
     }
@@ -91,7 +96,7 @@ impl Page {
     pub fn free_block<A: GlobalAlloc>(
         &mut self,
         heap: &mut Heap,
-        segment: &Segment,
+        segment: NonNull<Segment>,
         p: *mut u8,
         os_alloc: &A,
     ) {
@@ -104,7 +109,7 @@ impl Page {
         } else {
             // generic path
             let block = if unsafe { self.flags.flags }.has_aligned {
-                let offset = p as usize - segment.page_payload_addr(self);
+                let offset = p as usize - unsafe { segment.as_ref() }.page_payload_addr(self);
                 (p as usize - offset % self.block_size()) as *mut Block
             } else {
                 p.cast()
