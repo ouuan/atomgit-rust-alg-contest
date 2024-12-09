@@ -65,6 +65,8 @@ impl Heap {
         align: usize,
         os_alloc: &A,
     ) -> *mut u8 {
+        debug_assert!(align.is_power_of_two());
+
         if align <= MI_INTPTR_SIZE {
             return self.malloc(size, os_alloc);
         }
@@ -75,28 +77,25 @@ impl Heap {
         if size <= MI_SMALL_SIZE_MAX {
             let page = self.get_small_free_page(size);
             let free = unsafe { page.as_ref() }.free();
-            if !free.is_null() && free as usize % align == 0 {
+            if !free.is_null() && (free as usize & (align - 1) == 0) {
                 return Page::malloc_fast(page, self, size, os_alloc)
                     .map_or(null_mut(), |(ptr, _)| ptr.as_ptr());
             }
         }
 
-        match self.malloc_generic(size + align - 1, os_alloc) {
-            None => null_mut(),
-            Some((ptr, page)) => {
+        self.malloc_generic(size + align - 1, os_alloc)
+            .map_or(null_mut(), |(ptr, page)| {
                 page.set_aligned(true);
-                let offset = ptr.align_offset(align);
-                (ptr.as_ptr() as usize + offset) as _
-            }
-        }
+                let aligned_addr = (ptr.as_ptr() as usize + align - 1) & !(align - 1);
+                aligned_addr as *mut u8
+            })
     }
 
     pub fn free<A: GlobalAlloc>(&mut self, p: *mut u8, os_alloc: &A) {
-        let Some(segment) = (unsafe { Segment::of_ptr(p).as_ref() }) else {
-            return;
-        };
-        let page = segment.page_of_ptr(p);
-        Page::free_block(self, page, segment.into(), p, os_alloc);
+        if let Some(segment) = unsafe { Segment::of_ptr(p).as_ref() } {
+            let page = segment.page_of_ptr(p);
+            Page::free_block(self, page, segment.into(), p, os_alloc);
+        }
     }
 
     fn get_small_free_page(&mut self, size: usize) -> NonNull<Page> {
@@ -118,8 +117,7 @@ impl Heap {
             self.alloc_huge_page(size, os_alloc)
         };
 
-        let page = NonNull::new(page)?;
-        Page::malloc_fast(page, self, size, os_alloc)
+        NonNull::new(page).and_then(|p| Page::malloc_fast(p, self, size, os_alloc))
     }
 
     pub fn register_deferred_free(&mut self, hook: fn(bool, u64)) {
@@ -127,7 +125,7 @@ impl Heap {
     }
 
     fn deferred_free(&mut self, force: bool) {
-        self.heartbeat += 1;
+        self.heartbeat = self.heartbeat.wrapping_add(1);
         if let Some(hook) = self.deferred_free_hook {
             if !self.calling_deferred_free {
                 self.calling_deferred_free = true;
@@ -168,9 +166,8 @@ impl Heap {
                     page_to_retire = p;
                     p = next;
                     continue;
-                } else {
-                    break;
                 }
+                break;
             }
 
             page.extend();
@@ -203,16 +200,14 @@ impl Heap {
     }
 
     fn alloc_page<A: GlobalAlloc>(&mut self, block_size: usize, os_alloc: &A) -> *mut Page {
-        match self.segment_page_alloc(block_size, os_alloc) {
-            None => null_mut(),
-            Some((segment, mut p)) => {
+        self.segment_page_alloc(block_size, os_alloc)
+            .map_or(null_mut(), |(segment, mut p)| {
                 let page_size = unsafe { segment.as_ref() }.page_size(p.as_ptr());
                 let page = unsafe { p.as_mut() };
                 page.init(page_size, block_size);
                 self.page_queue_push_front(page);
                 p.as_ptr()
-            }
-        }
+            })
     }
 
     fn alloc_huge_page<A: GlobalAlloc>(&mut self, size: usize, os_alloc: &A) -> *mut Page {
@@ -243,16 +238,14 @@ impl Heap {
     }
 
     fn page_queue_first_update(&mut self, block_size: usize, page: *mut Page) {
-        if block_size > MI_SMALL_SIZE_MAX {
-            return;
+        if block_size <= MI_SMALL_SIZE_MAX {
+            let wsize = wsize_from_size(block_size);
+            if self.pages_free_direct[wsize].as_ptr() != page {
+                let page = NonNull::new(page).unwrap_or(empty_page());
+                let (l, r) = WSIZE_RANGE_IN_SAME_SMALL_BIN[wsize];
+                self.pages_free_direct[l as usize..r as usize].fill(page);
+            }
         }
-        let wsize = wsize_from_size(block_size);
-        if self.pages_free_direct[wsize].as_ptr() == page {
-            return;
-        }
-        let page = NonNull::new(page).unwrap_or(empty_page());
-        let (l, r) = WSIZE_RANGE_IN_SAME_SMALL_BIN[wsize];
-        self.pages_free_direct[l as usize..r as usize].fill(page);
     }
 
     fn segment_page_alloc<A: GlobalAlloc>(

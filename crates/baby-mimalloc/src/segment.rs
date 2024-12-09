@@ -79,7 +79,7 @@ impl Segment {
         // clear pages
         unsafe { pages_base.write_bytes(0, capacity) };
 
-        let value = Segment {
+        let value = Self {
             next: null_mut(),
             prev: null_mut(),
             used: 1, // always immediately allocate a page
@@ -90,7 +90,7 @@ impl Segment {
         };
         unsafe { segment.write(value) };
 
-        let mut page = unsafe { NonNull::<Page>::new_unchecked(pages_base) };
+        let mut page = unsafe { NonNull::new_unchecked(pages_base) };
         unsafe { page.as_mut() }.set_in_use(true);
 
         Some((segment, page))
